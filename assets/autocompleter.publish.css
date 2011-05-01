@@ -1,0 +1,41 @@
+
+div.autocompleter-popup {
+	overflow: auto;
+	max-height: 400px;
+	margin: 0px none;
+	margin-top: 0.4em;
+	padding: 0px;
+	border: 0px none;
+	background-color: rgba(0,0,0,0.8);
+	color: #fff;
+	-moz-box-shadow: 2px 2px 8px rgba(0, 0, 0, 0.3);
+	-webkit-box-shadow: 2px 2px 8px rgba(0, 0, 0, 0.3);
+	box-shadow: 2px 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+ul.autocompleter-subsectionmanager, ul.autocompleter-subsectionmanager li {
+	margin: 0px;
+	padding: 0px;
+}
+div.autocompleter-popup ul, div.autocompleter-popup li {
+	list-style: none !important;
+}
+
+div.autocompleter-popup .item {
+	margin: 0px auto;
+	padding: 5px;
+	border: 0px none;
+	border-bottom: 1px solid #000;
+}
+div.autocompleter-popup .item:last-child {
+	border-bottom: 0px none;
+}
+
+div.autocompleter-popup .item.highlighted {
+	background: #E6E6E5;
+	color: #222;
+}
+
+div.autocompleter-popup p.debug {
+	display: none;
+}

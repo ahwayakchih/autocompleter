@@ -135,8 +135,42 @@
 		public function __AdminPagePreGenerate($ctx) {
 			// context array contains: &$oPage
 
-			if (self::$foundFields) {
-				$ctx['oPage']->addScriptToHead(URL . '/extensions/autocompleter/assets/autocompleter.publish.js', 101, false);
+			if (!self::$foundFields) return;
+
+			$ctx['oPage']->addScriptToHead(URL . '/extensions/autocompleter/lib/jQuery.selectionPosition/jquery.selectionposition.js', 100, false);
+			$ctx['oPage']->addScriptToHead(URL . '/extensions/autocompleter/assets/autocompleter.publish.js', 101, false);
+			$ctx['oPage']->addStylesheetToHead(URL . '/extensions/autocompleter/assets/autocompleter.publish.css', 'screen', 101, false);
+
+			$callback = Symphony::Engine()->getPageCallback();
+			if (!empty($callback['context']['section_handle'])) {
+				// Use Subsection Manager fields as one of the data sources
+
+				$sm = new SectionManager(Symphony::Engine());
+				$section_id = $sm->fetchIDFromHandle($callback['context']['section_handle']);
+				$section = $sm->fetch($section_id);
+
+				$fm = new FieldManager(Symphony::Engine());
+				$fields = $section->fetchFields('subsectionmanager');
+
+				$js = array();
+				foreach ($fields as $field) {
+					$js[$field->get('element_name')] = array(
+						'id' => $field->get('id'),
+						'label' => $field->get('label'),
+					);
+				}
+
+				if (!empty($js)) {
+					$ctx['oPage']->addScriptToHead(URL . '/extensions/autocompleter/assets/autocompleter.subsectionmanager.js', 101, false);
+					// Let our script know about subsection manager fields.
+					$ctx['oPage']->addElementToHead(
+						new XMLElement(
+							'script',
+							"Symphony.Context.add('autocompleter', " . json_encode(array('subsectionmanager' => $js, 'section_id' => $section_id)) . ");",
+							array('type' => 'text/javascript')
+						), 101
+					);
+				}
 			}
 		}
 
@@ -148,9 +182,9 @@
 			$fields = array(
 				'field_id' => intval($ctx['field']->get('id')),
 				'section_id' => intval($ctx['field']->get('parent_section')),
-				'autocomplete' => trim($ctx['data']['autocompleter']['autocomplete']),
+				'autocomplete' => $ctx['data']['autocompleter']['autocomplete'],
 				'interval' => intval($ctx['data']['autocompleter']['interval']),
-				'keyCode' => self::findKeyCode(trim($ctx['data']['autocompleter']['autocomplete'])),
+				'keyCode' => self::findKeyCode($ctx['data']['autocompleter']['autocomplete']),
 			);
 
 			Symphony::Database()->query("DELETE FROM tbl_autocompleter_fields WHERE section_id = {$fields['section_id']} AND field_id = {$fields['field_id']}");
