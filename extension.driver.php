@@ -19,7 +19,8 @@
 				CREATE TABLE IF NOT EXISTS tbl_autocompleter_fields (
 					`field_id` int unsigned,
 					`section_id` int unsigned,
-					`autocomplete` varchar(12) DEFAULT "",
+					`command` varchar(12) DEFAULT "",
+					`prefix` varchar(12) DEFAULT "",
 					`interval` int unsigned DEFAULT 0,
 					`keyCode` int DEFAULT -1,
 					PRIMARY KEY (`field_id`),
@@ -85,11 +86,11 @@
 			// context array contains: &$field, &$label, &$textarea
 
 			$value = Symphony::Database()->fetchRow(0, '
-				SELECT `autocomplete`, `interval`, `keyCode`
+				SELECT *
 				FROM tbl_autocompleter_fields	
 				WHERE `field_id` = '.$ctx['field']->get('id').' AND `section_id` = '.$ctx['field']->get('parent_section').' AND `keyCode` > -1'
 			);
-			if (empty($value) || empty($value['autocomplete'])) return;
+			if (empty($value) || empty($value['command'])) return;
 
 			$element = NULL;
 			if (!empty($ctx['textarea'])) $element = 'textarea';
@@ -97,7 +98,8 @@
 			else return;
 
 			$ctx[$element]->setAttribute('class', trim($ctx[$element]->getAttribute('class')).' autocompleter');
-			$ctx[$element]->setAttribute('data-autocompleter', $value['autocomplete']);
+			$ctx[$element]->setAttribute('data-autocompletercommand', $value['command']);
+			$ctx[$element]->setAttribute('data-autocompleterprefix', $value['prefix']);
 			$ctx[$element]->setAttribute('data-autocompleterinterval', ($value['interval'] >= 0 ? $value['interval'] : '0'));
 			$ctx[$element]->setAttribute('data-autocompleterkeycode', $value['keyCode']);
 			self::$foundFields = true;
@@ -128,6 +130,7 @@
 
 			// Append scripts and styles for field settings pane
 			Administration::instance()->Page->addScriptToHead(URL . '/extensions/autocompleter/assets/autocompleter.settings.js', 101, false);
+			Administration::instance()->Page->addStylesheetToHead(URL . '/extensions/autocompleter/assets/autocompleter.settings.css', 'screen', 101, false);
 		}
 
 		// Adds script and css to head right before page rendering.
@@ -182,14 +185,15 @@
 			$fields = array(
 				'field_id' => intval($ctx['field']->get('id')),
 				'section_id' => intval($ctx['field']->get('parent_section')),
-				'autocomplete' => $ctx['data']['autocompleter']['autocomplete'],
+				'command' => $ctx['data']['autocompleter']['command'],
+				'prefix' => $ctx['data']['autocompleter']['prefix'],
 				'interval' => intval($ctx['data']['autocompleter']['interval']),
-				'keyCode' => self::findKeyCode($ctx['data']['autocompleter']['autocomplete']),
+				'keyCode' => self::findKeyCode($ctx['data']['autocompleter']['command']),
 			);
 
 			Symphony::Database()->query("DELETE FROM tbl_autocompleter_fields WHERE section_id = {$fields['section_id']} AND field_id = {$fields['field_id']}");
 
-			if (!empty($fields['autocomplete'])) {
+			if (!empty($fields['command'])) {
 				Symphony::Database()->insert($fields, 'tbl_autocompleter_fields');
 			}
 		}

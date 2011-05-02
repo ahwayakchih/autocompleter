@@ -9,42 +9,46 @@
 	var autocompleter = {
 		timer: null,
 		construct: function(){
-			var id = $(this).attr('id');
+			var field = $(this),
+			    id = $(this).attr('id');
+
 			if (!id) {
-				id = $(this).attr('name');
+				id = field.attr('name');
 				if (!id) {
 					id = String(new Date().getTime()) + String(Math.random()).replace('0.', '');
 				}
 				id = id.replace('[', '-').replace(']', '-').replace(/-+/,'-').replace(/^-+|-+$/,'');
-				$(this).attr('id', id);
+				field.attr('id', id);
 			}
 
-			var fieldID = $(this).parents('div[id]').attr('id').replace('field-','');
-			var fieldHandle = $(this).attr('name').replace(/^fields\[([^\]]+)\]/i, '$1');
+			var fieldID = field.parents('div[id]').attr('id').replace('field-','');
+			var fieldHandle = field.attr('name').replace(/^fields\[([^\]]+)\]/i, '$1');
 
 			var exists = $('div#'+id+'-autocompleter');
 			if (!exists || exists.length < 1) {
-				$('body').append($('<div class="autocompleter-popup'+($(this).hasClass('debug') ? ' debug' : '')+'" id="'+id+'-autocompleter"></div>'));
+				$('body').append($('<div class="autocompleter-popup'+(field.hasClass('debug') ? ' debug' : '')+'" id="'+id+'-autocompleter"></div>'));
 				$('div#'+id+'-autocompleter').css({'position': 'absolute', 'z-index': '99'}).hide().attr('data-field-id', fieldID).attr('data-field-handle', fieldHandle);
 			}
-			$(this).addClass('autocompleter-ready');//.unbind('focus', autocompleter.start).bind('focus', autocompleter.start);
+			field.addClass('autocompleter-ready');//.unbind('focus', autocompleter.start).bind('focus', autocompleter.start);
 		},
 		start: function(){
+			var field = $(this);
+
 			autocompleter.processAllowed = true;
 
-			if (!$(this).hasClass('autocompleter-ready')) {
+			if (!field.hasClass('autocompleter-ready')) {
 				autocompleter.construct.call(this);
-				$(this).selectionOffset(true); // start also selection calculator
+				field.selectionOffset(true); // start also selection calculator
 			}
 
-			if (!$(this).hasClass('autocompleter-started')) {
-				$(this).addClass('autocompleter-started');
-				$(this).bind('keydown', autocompleter.preprocess)
+			if (!field.hasClass('autocompleter-started')) {
+				field.addClass('autocompleter-started');
+				field.bind('keydown', autocompleter.preprocess)
 					.bind('keyup', autocompleter.process)
 					.bind('blur', autocompleter.stop);
 			}
 
-			//$(this).parents('form').bind('submit', autocompleter.submit);
+			//field.parents('form').bind('submit', autocompleter.submit);
 		},
 		preprocess: function(event){
 			autocompleter.processAllowed = false;
@@ -55,9 +59,8 @@
 					break;
 				case 27: // ESC
 					$('div#'+$(this).attr('id')+'-autocompleter').trigger('autocomplete.cancelled');
-					var pass = $(this).attr('data-autocompleter');
-					$(this).val(autocompleter.startedAt + pass + autocompleter.endedBefore);
-					this.setSelectionRange(autocompleter.startedAt.length + pass.length, autocompleter.startedAt.length + pass.length);
+					$(this).val(autocompleter.startedAt + autocompleter.endedBefore);
+					this.setSelectionRange(autocompleter.startedAt.length, autocompleter.startedAt.length);
 					autocompleter.stop.call(this);
 					return false;
 					break;
@@ -118,60 +121,70 @@
 			$('div#'+$(this).attr('id')+'-autocompleter').remove();
 		},
 		highlightNextItem: function(direction){
-			var popup = $('div#'+$(this).attr('id')+'-autocompleter');
-			var highlighted = $('.item.highlighted', popup).removeClass('highlighted');
+			var popup = $('div#'+$(this).attr('id')+'-autocompleter'),
+			    highlighted = $('.item.highlighted', popup).removeClass('highlighted'),
+			    data = highlighted.attr('data-preview');
+
 			if (!highlighted || highlighted.length < 1) {
 				highlighted = $('.item:first-child', popup).addClass('highlighted');
 			}
 			else {
-				var items = $(popup).find('.item');
-				var index = $(items).index(highlighted);
-				if (!direction) direction = 1;
-				index += direction;
+				var items = $(popup).find('.item'),
+				    index = $(items).index(highlighted);
+
+				index += (direction ? direction : 1);
+
 				if (index < 0) index = items.length - 1;
-				else if (index >= items.length) {
-					index = 0;
-				}
+				else if (index >= items.length) index = 0;
+
 				highlighted = items.eq(index).addClass('highlighted');
 			}
-			var data = $(highlighted).attr('data-preview');
-			if (data) {
-				var val = $(this).val();
-				val = autocompleter.startedAt + data + autocompleter.endedBefore;
-				var pos = this.selectionStart;
-				$(this).val(val);
-				this.setSelectionRange(pos, pos + (data.length - (pos-autocompleter.startedAt.length)));
 
+			if (data) {
+				var val = autocompleter.startedAt + data + autocompleter.endedBefore,
+				    pos = this.selectionStart;
+
+				$(this).val(val);
+				this.setSelectionRange(pos, pos + (data.length - (pos - autocompleter.startedAt.length)));
 			}
 		}
 	};
 
 	$.fn.autocompleter = function(){
 		return $(this).each(function(){
-			if (!$(this).hasClass('autocompleter-ready')) {
-				autocompleter.start.call($(this));
-				autocompleter.stop.call($(this));				
+			var field = $(this),
+			    command = field.attr('data-autocompletercommand'),
+				prefix = field.attr('data-autocompleterprefix'),
+				keyCode = field.attr('data-autocompleterkeycode'),
+				interval = field.attr('data-autocompleterinterval'),
+				prefixedcommand = prefix + command;
+
+			if (!field.hasClass('autocompleter-ready')) {
+				autocompleter.start.call(field);
+				autocompleter.stop.call(field);				
 			}
-			$(this).bind('keyup', function(event){
-				if (event.keyCode == $(this).attr('data-autocompleterkeycode') && !$(this).hasClass('autocompleter-started')) {
-					var pass = $(this).attr('data-autocompleter'),
-						val = $(this).val(),
-					    s = val.substr(this.selectionStart - pass.length, pass.length);
 
-					if (pass != s) return;
+			field.bind('keyup', function(event){
+				var forced = (event.which == 32 && event.ctrlKey);
+				if ((event.which == keyCode || forced) && !field.hasClass('autocompleter-started')) {
 
-					autocompleter.startedAt = val.substr(0, this.selectionStart - pass.length + 1);
-					autocompleter.endedBefore = val.substr(this.selectionStart);
+					var val = field.val(),
+						start = this.selectionStart;
 
-					var field = $(this);
+					if (!forced && prefixedcommand != val.substr(start - prefixedcommand.length, prefixedcommand.length)) return;
+
+					autocompleter.startedAt = val.substr(0, start - (forced ? 0 : command.length));
+					autocompleter.endedBefore = val.substr(start);
+
+					if (!forced) {
+						field.val(autocompleter.startedAt + autocompleter.endedBefore);
+						this.setSelectionRange(autocompleter.startedAt.length, autocompleter.startedAt.length);
+					}
 
 					if (autocompleter.timer != null) clearTimeout(autocompleter.timer);
-					autocompleter.timer = null;
-
-					var interval = $(field).attr('data-autocompleterinterval');
 					autocompleter.timer = setTimeout(function(){
 						autocompleter.start.call(field);
-						$(field).trigger(event); // Make it start processing right away
+						field.trigger(event); // Make it start processing right away
 					}, interval);
 				}
 			});
