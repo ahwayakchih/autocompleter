@@ -6,11 +6,17 @@
 	 * @source: http://github.com/ahwayakchih/autocompleter
 	 */
 
+	// TODO: make extension output context data with information about .autocompleter fields.
+	//		That way we will not have to add class inside extension (which works only for textarea and textbox fields,
+	//      but not for input field - because it does not generate delegate which allows for modification of element attributes)
+
+	// TODO: add generic autocompleter "plugin", which will allow for searching all sections and not depend on SubsectionManager fields.
+
+	// TODO: remove this and keep per-field state
 	var autocompleter = {
 		timer: null,
 		ignorekey: false,
 	};
-
 
 	$('div.autocompleter-popup').live('highlightnext.autocompleter', function(event, direction){
 		var popup = $(this),
@@ -92,10 +98,9 @@
 
 			if (forced || event.which == $(this).attr('data-autocompleterkeycode')) {
 				var field = $(this),
+					interval = field.attr('data-autocompleterinterval') || 300,
 				    command = field.attr('data-autocompletercommand'),
 					prefix = field.attr('data-autocompleterprefix'),
-					keyCode = field.attr('data-autocompleterkeycode'),
-					interval = field.attr('data-autocompleterinterval'),
 					prefixedcommand = prefix + command.substr(0,-1);/* substract what was not added to val yet (we are in keydown, not keyup) */
 
 				var val = field.val(),
@@ -103,6 +108,7 @@
 
 				if (!forced && prefixedcommand != val.substr(start - prefixedcommand.length, prefixedcommand.length)) return;
 
+				// TODO: this should be calculated after timeout triggers, so it will be always correct and will not be calculated everytime command restarts
 				autocompleter.startedAt = val.substr(0, start - (forced ? 0 : command.length - 1/* substract what was not added to val yet (we are in keydown, not keyup) */));
 				autocompleter.endedBefore = val.substr(start);
 
