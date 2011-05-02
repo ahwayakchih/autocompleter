@@ -8,190 +8,223 @@
 
 	var autocompleter = {
 		timer: null,
-		construct: function(){
-			var field = $(this),
-			    id = $(this).attr('id');
+		ignorekey: false,
+	};
 
-			if (!id) {
-				id = field.attr('name');
-				if (!id) {
-					id = String(new Date().getTime()) + String(Math.random()).replace('0.', '');
+
+	$('div.autocompleter-popup').live('highlightnext.autocompleter', function(event, direction){
+		var popup = $(this),
+		    highlighted = $('.item.highlighted', popup);
+
+		if (!highlighted || highlighted.length < 1) {
+			highlighted = $('.item:first-child', popup).addClass('highlighted');
+		}
+		else {
+			var items = $(popup).find('.item'),
+			    index = $(items).index(highlighted) + (direction > 0 ? 1 : -1);
+
+			if (items.length == 1) return; // No need to highlight already highlighted item :).
+
+			highlighted.removeClass('highlighted').trigger('highlighted', [false]);
+
+			if (index < 0) index = items.length - 1;
+			else if (index >= items.length) index = 0;
+
+			highlighted = items.eq(index).addClass('highlighted');
+		}
+
+		$(highlighted).trigger('highlighted', [true]);
+	});
+
+	$('div.autocompleter-popup li.item:not(.highlighted)').live('mouseenter', function(event){
+		var item = $(this),
+		    highlighted = $('.item.highlighted', item.parents('div.autocompleter-popup')).removeClass('highlighted').trigger('highlighted', [false]);
+
+		item.addClass('highlighted').trigger('highlighted', [true]);
+	});
+
+	$('div.autocompleter-popup li.item.highlighted')
+		.live('highlighted', function(event){
+
+			var id = $(this).parents('div.autocompleter-popup').attr('id').replace(/-autocompleter$/, ''),
+			    preview = $(this).attr('data-preview');
+
+			if (preview) $('#'+id).trigger('preview', [preview]);
+
+		}).live('click', function(event){
+
+			var id = $(this).parents('div.autocompleter-popup').attr('id').replace(/-autocompleter$/, '');
+			$('#'+id).focus().trigger('confirm').trigger('process');
+
+		});
+
+
+
+	// This event handler goes first, so it can initialize stuff.
+	$('.autocompleter:not(.autocompleter-ready)').live('autocomplete.autocompleter', function(){
+		var field = $(this),
+			fieldID = field.parents('div[id]').attr('id').replace('field-',''),
+			fieldHandle = field.attr('name').replace(/^fields\[([^\]]+)\]/i, '$1'),
+		    id = $(this).attr('id');
+
+		if (!id) {
+			id = field.attr('name') || String(new Date().getTime()) + String(Math.random()).replace('0.', '');
+			id = id.replace('[', '-').replace(']', '-').replace(/-+/,'-').replace(/^-+|-+$/,'');
+			field.attr('id', id);
+		}
+
+		var exists = $('div#'+id+'-autocompleter');
+		if (!exists || exists.length < 1) {
+			$('<div class="autocompleter-popup'+(field.hasClass('debug') ? ' debug' : '')+'" id="'+id+'-autocompleter"></div>')
+				.css({'position': 'absolute', 'z-index': '99'})
+				.hide()
+				.appendTo($('body'));
+		}
+		field.addClass('autocompleter-ready');
+		field.selectionOffset(true); // Init selectionPosition too.
+	});
+
+
+	// This goes second, after initialization was done.
+	$('.autocompleter:not(.autocompleter-started)')
+		.live('keydown.autocompleter', function(event){
+			var forced = (event.which == 32 && event.ctrlKey);
+
+			if (forced || event.which == $(this).attr('data-autocompleterkeycode')) {
+				var field = $(this),
+				    command = field.attr('data-autocompletercommand'),
+					prefix = field.attr('data-autocompleterprefix'),
+					keyCode = field.attr('data-autocompleterkeycode'),
+					interval = field.attr('data-autocompleterinterval'),
+					prefixedcommand = prefix + command.substr(0,-1);/* substract what was not added to val yet (we are in keydown, not keyup) */
+
+				var val = field.val(),
+					start = this.selectionStart;
+
+				if (!forced && prefixedcommand != val.substr(start - prefixedcommand.length, prefixedcommand.length)) return;
+
+				autocompleter.startedAt = val.substr(0, start - (forced ? 0 : command.length - 1/* substract what was not added to val yet (we are in keydown, not keyup) */));
+				autocompleter.endedBefore = val.substr(start);
+
+				if (!forced) {
+					field.val(autocompleter.startedAt + autocompleter.endedBefore);
+					this.setSelectionRange(autocompleter.startedAt.length, autocompleter.startedAt.length);
 				}
-				id = id.replace('[', '-').replace(']', '-').replace(/-+/,'-').replace(/^-+|-+$/,'');
-				field.attr('id', id);
+
+				if (autocompleter.timer != null) clearTimeout(autocompleter.timer);
+				autocompleter.timer = setTimeout(function(){
+					field.trigger('autocomplete');
+				}, interval);
+			}
+		})
+		.live('autocomplete.autocompleter', function(){
+			autocompleter.ignorekey = false;
+			$(this)
+				.addClass('autocompleter-started')
+				.bind('keydown.autocompleter', function(event){
+					event.type = 'preprocess';
+					$(this).trigger(event);
+					event.type = 'keydown';
+					return event.result;
+				})
+				.bind('keyup.autocompleter', function(event){
+					event.type = 'process';
+					$(this).trigger(event);
+					event.type = 'keyup';
+					return event.result;
+				})
+				.trigger('process');
+		});
+
+
+	$('.autocompleter.autocompleter-started')
+		.live('remove.autocompleter', function(){
+			$(this).trigger('cancel').die('.autocompleter').removeClass('autocompleter-ready');
+			$('div#'+$(this).attr('id')+'-autocompleter').remove();
+		})
+		.live('stop.autocompleter', function(event){
+			if (autocompleter.timer != null) clearTimeout(autocompleter.timer);
+			autocompleter.timer = null;
+
+			$(this).unbind('keydown.autocompleter').unbind('keyup.autocompleter').unbind('blur.autocompleter').removeClass('autocompleter-started');
+			$('div#'+$(this).attr('id')+'-autocompleter').slideUp('fast');
+		})
+		.live('cancel.autocompleter', function(event){
+			$('div#'+$(this).attr('id')+'-autocompleter').trigger('cancel');
+
+			$(this).val(autocompleter.startedAt + autocompleter.endedBefore);
+			this.setSelectionRange(autocompleter.startedAt.length, autocompleter.startedAt.length);
+
+			$(this).trigger('stop');
+		})
+		.live('confirm.autocompleter', function(){
+			var item = $('div#'+$(this).attr('id')+'-autocompleter .item.highlighted');
+
+			if (item.length > 0) {
+				var data = item.attr('data-drop') || item.attr('data-value');
+				if (data) {
+					$(this).val(autocompleter.startedAt + data + autocompleter.endedBefore);
+					this.setSelectionRange(autocompleter.startedAt.length + data.length, autocompleter.startedAt.length + data.length);
+				}
+				autocompleter.ignorekey = !item.hasClass('continue');
+				item.trigger('confirm');
 			}
 
-			var fieldID = field.parents('div[id]').attr('id').replace('field-','');
-			var fieldHandle = field.attr('name').replace(/^fields\[([^\]]+)\]/i, '$1');
-
-			var exists = $('div#'+id+'-autocompleter');
-			if (!exists || exists.length < 1) {
-				$('body').append($('<div class="autocompleter-popup'+(field.hasClass('debug') ? ' debug' : '')+'" id="'+id+'-autocompleter"></div>'));
-				$('div#'+id+'-autocompleter').css({'position': 'absolute', 'z-index': '99'}).hide().attr('data-field-id', fieldID).attr('data-field-handle', fieldHandle);
+			if (autocompleter.ignorekey) {
+				$(this).trigger('stop');
 			}
-			field.addClass('autocompleter-ready');//.unbind('focus', autocompleter.start).bind('focus', autocompleter.start);
-		},
-		start: function(){
-			var field = $(this);
+		})
+		.live('preview.autocompleter', function(event, preview){
+			if (!preview) return;
 
-			autocompleter.processAllowed = true;
+			var val = autocompleter.startedAt + preview + autocompleter.endedBefore,
+			    pos = this.selectionStart;
 
-			if (!field.hasClass('autocompleter-ready')) {
-				autocompleter.construct.call(this);
-				field.selectionOffset(true); // start also selection calculator
-			}
-
-			if (!field.hasClass('autocompleter-started')) {
-				field.addClass('autocompleter-started');
-				field.bind('keydown', autocompleter.preprocess)
-					.bind('keyup', autocompleter.process)
-					.bind('blur', autocompleter.stop);
-			}
-
-			//field.parents('form').bind('submit', autocompleter.submit);
-		},
-		preprocess: function(event){
-			autocompleter.processAllowed = false;
-			switch (event.keyCode) {
+			$(this).val(val);
+			this.setSelectionRange(pos, pos + (preview.length - (pos - autocompleter.startedAt.length)));
+		})
+		.live('preprocess.autocompleter', function(event){
+			autocompleter.ignorekey = true;
+			switch (event.which) {
 				case 9: // TAB
-					autocompleter.highlightNextItem.call(this, event.shiftKey ? -1 : 1);
+					$('div#'+$(this).attr('id')+'-autocompleter').trigger('highlightnext', [event.shiftKey ? -1 : 1]);
 					return false;
 					break;
 				case 27: // ESC
-					$('div#'+$(this).attr('id')+'-autocompleter').trigger('autocomplete.cancelled');
-					$(this).val(autocompleter.startedAt + autocompleter.endedBefore);
-					this.setSelectionRange(autocompleter.startedAt.length, autocompleter.startedAt.length);
-					autocompleter.stop.call(this);
+					$(this).trigger('cancel');
 					return false;
 					break;
 				case 13: // ENTER
-					var item = $('div#'+$(this).attr('id')+'-autocompleter .item.highlighted');
-					if (item.length > 0) {
-						var data = item.attr('data-drop');
-						if (data) {
-							$(this).val(autocompleter.startedAt + data + autocompleter.endedBefore);
-							this.setSelectionRange(autocompleter.startedAt.length + data.length, autocompleter.startedAt.length + data.length);
-						}
-						autocompleter.processAllowed = item.hasClass('continue');
-						item.trigger('autocomplete.selected');
-					}
-					if (!autocompleter.processAllowed) {
-						autocompleter.stop.call(this);
-					}
+					$(this).trigger('confirm');
 					return false;
 					break;
 				case 37: // left arrow
 					this.setSelectionRange(this.selectionStart - 1, this.selectionEnd);
-					autocompleter.processAllowed = true;
-					// TODO: cancel after goinf outside of original selection area
+					autocompleter.ignorekey = false;
+					// TODO: cancel after going outside of original selection area
 					return false;
 					break;
 				case 39: // right arrow
-					this.setSelectionRange(this.selectionStart + 1, this.selectionEnd - 1);
-					autocompleter.processAllowed = true;
-					// TODO: cancel after goinf outside of original selection area
+					this.setSelectionRange(this.selectionStart + 1, this.selectionEnd);
+					autocompleter.ignorekey = false;
+					// TODO: cancel after going outside of original selection area
 					return false;
 					break;
 				default:
-					autocompleter.processAllowed = true;
+					autocompleter.ignorekey = false;
 					break;
 			}
-		},
-		process: function(event){
-			if (!autocompleter.processAllowed) return;
+		})
+		.live('process.autocompleter', function(event){
+			if (autocompleter.ignorekey) return;
 			var o = $(this).selectionOffset();
+
 			$($('div#'+$(this).attr('id')+'-autocompleter'))
 				.css(o)
 				.html('<p class="debug">scrollLeft: '+this.scrollLeft+'<br />pre: '+o.editedLinePre+'<br />edited: '+o.editedWordPre+'<br />post: '+o.editedWordPost+'</p>')
 				.slideDown('fast')
-				.trigger('autocomplete.autocompleter', [o]);
-			autocompleter.highlightNextItem.call(this);
-		},
-		stop: function(){
-			if (autocompleter.timer != null) clearTimeout(autocompleter.timer);
-			autocompleter.timer = null;
-
-			$(this).unbind('keydown', autocompleter.preprocess).unbind('keyup', autocompleter.process).unbind('blur', autocompleter.stop).removeClass('autocompleter-started');
-			$('div#'+$(this).attr('id')+'-autocompleter').slideUp('fast');
-			$(this).parents('form').unbind('submit', autocompleter.submit);
-		},
-		destruct: function(){
-			autocompleter.stop.call(this);
-			$(this).unbind('focus', autocompleter.start).removeClass('autocompleter-ready');
-			$('div#'+$(this).attr('id')+'-autocompleter').remove();
-		},
-		highlightNextItem: function(direction){
-			var popup = $('div#'+$(this).attr('id')+'-autocompleter'),
-			    highlighted = $('.item.highlighted', popup).removeClass('highlighted'),
-			    data = highlighted.attr('data-preview');
-
-			if (!highlighted || highlighted.length < 1) {
-				highlighted = $('.item:first-child', popup).addClass('highlighted');
-			}
-			else {
-				var items = $(popup).find('.item'),
-				    index = $(items).index(highlighted);
-
-				index += (direction ? direction : 1);
-
-				if (index < 0) index = items.length - 1;
-				else if (index >= items.length) index = 0;
-
-				highlighted = items.eq(index).addClass('highlighted');
-			}
-
-			if (data) {
-				var val = autocompleter.startedAt + data + autocompleter.endedBefore,
-				    pos = this.selectionStart;
-
-				$(this).val(val);
-				this.setSelectionRange(pos, pos + (data.length - (pos - autocompleter.startedAt.length)));
-			}
-		}
-	};
-
-	$.fn.autocompleter = function(){
-		return $(this).each(function(){
-			var field = $(this),
-			    command = field.attr('data-autocompletercommand'),
-				prefix = field.attr('data-autocompleterprefix'),
-				keyCode = field.attr('data-autocompleterkeycode'),
-				interval = field.attr('data-autocompleterinterval'),
-				prefixedcommand = prefix + command;
-
-			if (!field.hasClass('autocompleter-ready')) {
-				autocompleter.start.call(field);
-				autocompleter.stop.call(field);				
-			}
-
-			field.bind('keyup', function(event){
-				var forced = (event.which == 32 && event.ctrlKey);
-				if ((event.which == keyCode || forced) && !field.hasClass('autocompleter-started')) {
-
-					var val = field.val(),
-						start = this.selectionStart;
-
-					if (!forced && prefixedcommand != val.substr(start - prefixedcommand.length, prefixedcommand.length)) return;
-
-					autocompleter.startedAt = val.substr(0, start - (forced ? 0 : command.length));
-					autocompleter.endedBefore = val.substr(start);
-
-					if (!forced) {
-						field.val(autocompleter.startedAt + autocompleter.endedBefore);
-						this.setSelectionRange(autocompleter.startedAt.length, autocompleter.startedAt.length);
-					}
-
-					if (autocompleter.timer != null) clearTimeout(autocompleter.timer);
-					autocompleter.timer = setTimeout(function(){
-						autocompleter.start.call(field);
-						field.trigger(event); // Make it start processing right away
-					}, interval);
-				}
-			});
+				.trigger('autocomplete', [o])
+				.trigger('highlightnext');
 		});
-	}
 
-	$(document).ready(function() {
-		$('textarea.autocompleter, input[type=text].autocompleter').autocompleter();
-	});
 })(jQuery.noConflict());

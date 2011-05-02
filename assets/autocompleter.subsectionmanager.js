@@ -12,7 +12,7 @@
 
 		var stage = null;
 
-		$('div.autocompleter-popup li.item').live('autocomplete.selected', function(){
+		$('div.autocompleter-popup li.item').live('confirm.autocompleter', function(){
 			if (stage) {
 				stage.find('li[data-value="'+$(this).attr('data-value')+'"]').trigger('click.stage');
 
@@ -39,19 +39,19 @@
 			if (m[2]) m[2] = m[2].toLowerCase();
 			if (m[4]) m[4] = m[4].toLowerCase();
 
-			var html = '<ul class="autocompleter-subsectionmanager">';
+			var html = $('<ul class="autocompleter-subsectionmanager"></ul>');
 
 			if (!m[2] || !params['subsectionmanager'][m[2]]) {
 				if (m[3]) return;
 
 				for (var a in params['subsectionmanager']) {
 					if (!m[2] || a.indexOf(m[2]) == 0) {
-						html += '<li class="item subsection continue" data-drop="/'+a+'/" data-preview="/'+a+'/">'+params['subsectionmanager'][a]['label']+'</li>';
+						html.append('<li class="item subsection continue" data-drop="/'+a+'/" data-preview="/'+a+'/">'+params['subsectionmanager'][a]['label']+'</li>');
 					}
 				}
 			}
 			else if (m[2] && !m[3]) {
-				html += '<li class="item subsection continue" data-drop="/'+m[2]+'/" data-preview="/'+m[2]+'/">'+params['subsectionmanager'][m[2]]['label']+'</li>';
+				html.append('<li class="item subsection continue" data-drop="/'+m[2]+'/" data-preview="/'+m[2]+'/">'+params['subsectionmanager'][m[2]]['label']+'</li>');
 			}
 
 			if (m[3]) {
@@ -81,12 +81,18 @@
 					var data = $(this).attr('data-drop');
 					if (!data || data == '') data = $(this).attr('data-value');
 					if (!data) data = '';
-					html += '<li class="item entry" data-drop="'+data+'" data-value="'+$(this).attr('data-value')+'" data-preview="/'+m[2]+'/'+$(this).text()+'">'+$(this).text()+'</li>';
+					$('<li class="item entry">'+$(this).text()+'</li>')
+						.attr({
+							'data-drop': data,
+							'data-value': $(this).attr('data-value'),
+							'data-preview': '/'+m[2]+'/'+$(this).text()
+						})
+						.appendTo(html);
 				});
 			}
 
-			popup.append(html+'</ul>');
-		}).live('autocomplete.cancelled', function(){
+			popup.append(html);
+		}).live('cancel.autocompleter', function(){
 			if (stage) {
 				stage.trigger('browsestop');
 				stage = null;
