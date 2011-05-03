@@ -6,6 +6,11 @@
 	 * @source: http://github.com/ahwayakchih/autocompleter
 	 */
 
+	// Language strings
+	Symphony.Language.add({
+		'Enter separator that will be added between entries': false
+	});
+
 	// TODO: make extension output context data with information about .autocompleter fields.
 	//		That way we will not have to add class inside extension (which works only for textarea and textbox fields,
 	//      but not for input field - because it does not generate delegate which allows for modification of element attributes)
@@ -180,6 +185,28 @@
 				$(this).trigger('stop');
 			}
 		})
+		.live('confirmall.autocompleter', function(){
+			var data = '',
+				separator = prompt(Symphony.Language.get('Enter separator that will be added between entries'), ', ');
+
+			$('div#'+$(this).attr('id')+'-autocompleter .item').each(function(){
+				var item = $(this),
+					s = item.attr('data-drop') || item.attr('data-value') || '';
+
+				data += (data.length ? separator+s : s);
+				//autocompleter.ignorekey = !item.hasClass('continue');
+				item.trigger('confirm');
+			});
+
+			if (data.length) {
+				$(this).val(autocompleter.startedAt + data + autocompleter.endedBefore);
+				this.setSelectionRange(autocompleter.startedAt.length + data.length, autocompleter.startedAt.length + data.length);
+			}
+
+			if (autocompleter.ignorekey) {
+				$(this).trigger('stop');
+			}
+		})
 		.live('preview.autocompleter', function(event, preview){
 			if (!preview) return;
 
@@ -201,7 +228,7 @@
 					return false;
 					break;
 				case 13: // ENTER
-					$(this).trigger('confirm');
+					$(this).trigger(event.ctrlKey ? 'confirmall' : 'confirm');
 					return false;
 					break;
 				case 37: // left arrow
