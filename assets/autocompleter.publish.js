@@ -158,11 +158,9 @@
 			autocompleter.timer = null;
 
 			$(this).unbind('keydown.autocompleter').unbind('keyup.autocompleter').unbind('blur.autocompleter').removeClass('autocompleter-started');
-			$('div#'+$(this).attr('id')+'-autocompleter').slideUp('fast');
+			$('div#'+$(this).attr('id')+'-autocompleter').trigger('stop').slideUp('fast');
 		})
 		.live('cancel.autocompleter', function(event){
-			$('div#'+$(this).attr('id')+'-autocompleter').trigger('cancel');
-
 			$(this).val(autocompleter.startedAt + autocompleter.endedBefore);
 			this.setSelectionRange(autocompleter.startedAt.length, autocompleter.startedAt.length);
 
@@ -189,8 +187,8 @@
 			var data = '',
 				separator = prompt(Symphony.Language.get('Enter separator that will be added between entries'), ', ');
 
-			$('div#'+$(this).attr('id')+'-autocompleter .item').each(function(){
-				var item = $(this),
+			$('div#'+$(this).attr('id')+'-autocompleter .item').each(function(i, item){
+				var item = $(item),
 					s = item.attr('data-drop') || item.attr('data-value') || '';
 
 				data += (data.length ? separator+s : s);

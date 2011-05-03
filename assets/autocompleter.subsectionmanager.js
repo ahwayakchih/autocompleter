@@ -14,10 +14,7 @@
 
 		$('div.autocompleter-popup li.item').live('confirm.autocompleter', function(){
 			if (stage) {
-				stage.find('li[data-value="'+$(this).attr('data-value')+'"]').trigger('click.stage');
-
-				stage.trigger('browsestop');
-				stage = null;
+				stage.find('li[data-value="'+$(this).attr('data-value')+'"]:not(.selected)').trigger('click.stage');
 			}
 		});
 
@@ -92,7 +89,7 @@
 			}
 
 			popup.append(html);
-		}).live('cancel.autocompleter', function(){
+		}).live('stop.autocompleter', function(){
 			if (stage) {
 				stage.trigger('browsestop');
 				stage = null;
