@@ -70,12 +70,12 @@
 					'callback' => '__InitaliseAdminPageHead'
 				),
 				array(
-					'page' => '/administration/',
+					'page' => '/backend/',
 					'delegate' => 'AdminPagePreGenerate',
 					'callback' => '__AdminPagePreGenerate',
 				),
 				array(
-					'page' => '/administration/',
+					'page' => '/backend/',
 					'delegate' => 'AdminPagePostGenerate',
 					'callback' => '__AdminPagePostGenerate',
 				),

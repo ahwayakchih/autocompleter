@@ -1,3 +1,6 @@
+span.autocompleter-help.warning {
+	color: #d42;
+}
 
 div.autocompleter-popup {
 	overflow: auto;
@@ -38,4 +41,8 @@ div.autocompleter-popup .item.highlighted {
 
 div.autocompleter-popup p.debug {
 	display: none;
+}
+div.autocompleter-popup.debug p.debug {
+	display: block;
+	background: rgba(255, 128, 128, 0.3);
 }

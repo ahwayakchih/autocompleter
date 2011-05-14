@@ -76,7 +76,7 @@
 
 				queue.find('li:visible').each(function(index, item){
 					var data = $(this).attr('data-drop');
-					if (!data || data == '') data = $(this).attr('data-value');
+					if (!data || data == '') data = '"' + $(this).text() + '" (' + m[2] + '://' + $(this).attr('data-value') + ')';
 					if (!data) data = '';
 					$('<li class="item entry">'+$(this).text()+'</li>')
 						.attr({

@@ -8,7 +8,9 @@
 
 	// Language strings
 	Symphony.Language.add({
-		'Enter separator that will be added between entries': false
+		'Enter separator that will be added between entries': false,
+		'Press CTRL with "i" for autocompleter': false,
+		'Autocompleter is ON': false
 	});
 
 	// TODO: make extension output context data with information about .autocompleter fields.
@@ -23,36 +25,38 @@
 		ignorekey: false,
 	};
 
-	$('div.autocompleter-popup').live('highlightnext.autocompleter', function(event, direction){
-		var popup = $(this),
-		    highlighted = $('.item.highlighted', popup);
+	$('div.autocompleter-popup')
+		.live('highlightnext.autocompleter', function(event, direction){
+			var popup = $(this),
+			    highlighted = $('.item.highlighted', popup);
 
-		if (!highlighted || highlighted.length < 1) {
-			highlighted = $('.item:first-child', popup).addClass('highlighted');
-		}
-		else {
-			var items = $(popup).find('.item'),
-			    index = $(items).index(highlighted) + (direction > 0 ? 1 : -1);
+			if (!highlighted || highlighted.length < 1) {
+				highlighted = $('.item:first-child', popup).addClass('highlighted');
+			}
+			else {
+				var items = $(popup).find('.item'),
+				    index = $(items).index(highlighted) + (direction > 0 ? 1 : -1);
 
-			if (items.length == 1) return; // No need to highlight already highlighted item :).
+				if (items.length == 1) return; // No need to highlight already highlighted item :).
 
-			highlighted.removeClass('highlighted').trigger('highlighted', [false]);
+				highlighted.removeClass('highlighted').trigger('highlighted', [false]);
 
-			if (index < 0) index = items.length - 1;
-			else if (index >= items.length) index = 0;
+				if (index < 0) index = items.length - 1;
+				else if (index >= items.length) index = 0;
 
-			highlighted = items.eq(index).addClass('highlighted');
-		}
+				highlighted = items.eq(index).addClass('highlighted');
+			}
 
-		$(highlighted).trigger('highlighted', [true]);
-	});
+			$(highlighted).trigger('highlighted', [true]);
+		});
 
-	$('div.autocompleter-popup li.item:not(.highlighted)').live('mouseenter', function(event){
-		var item = $(this),
-		    highlighted = $('.item.highlighted', item.parents('div.autocompleter-popup')).removeClass('highlighted').trigger('highlighted', [false]);
+	$('div.autocompleter-popup li.item:not(.highlighted)')
+		.live('mouseenter', function(event){
+			var item = $(this),
+			    highlighted = $('.item.highlighted', item.parents('div.autocompleter-popup')).removeClass('highlighted').trigger('highlighted', [false]);
 
-		item.addClass('highlighted').trigger('highlighted', [true]);
-	});
+			item.addClass('highlighted').trigger('highlighted', [true]);
+		});
 
 	$('div.autocompleter-popup li.item.highlighted')
 		.live('highlighted', function(event){
@@ -72,34 +76,50 @@
 
 
 	// This event handler goes first, so it can initialize stuff.
-	$('.autocompleter:not(.autocompleter-ready)').live('autocomplete.autocompleter', function(){
-		var field = $(this),
-			fieldID = field.parents('div[id]').attr('id').replace('field-',''),
-			fieldHandle = field.attr('name').replace(/^fields\[([^\]]+)\]/i, '$1'),
-		    id = $(this).attr('id');
+	$('.autocompleter:not(.autocompleter-ready)')
+		.live('autocomplete.autocompleter', function(){
+			var field = $(this),
+				fieldID = field.parents('div[id]').attr('id').replace('field-',''),
+				fieldHandle = field.attr('name').replace(/^fields\[([^\]]+)\]/i, '$1'),
+			    id = $(this).attr('id');
 
-		if (!id) {
-			id = field.attr('name') || String(new Date().getTime()) + String(Math.random()).replace('0.', '');
-			id = id.replace('[', '-').replace(']', '-').replace(/-+/,'-').replace(/^-+|-+$/,'');
-			field.attr('id', id);
-		}
+			if (!id) {
+				id = field.attr('name') || String(new Date().getTime()) + String(Math.random()).replace('0.', '');
+				id = id.replace('[', '-').replace(']', '-').replace(/-+/,'-').replace(/^-+|-+$/,'');
+				field.attr('id', id);
+			}
 
-		var exists = $('div#'+id+'-autocompleter');
-		if (!exists || exists.length < 1) {
-			$('<div class="autocompleter-popup'+(field.hasClass('debug') ? ' debug' : '')+'" id="'+id+'-autocompleter"></div>')
-				.css({'position': 'absolute', 'z-index': '99'})
-				.hide()
-				.appendTo($('body'));
-		}
-		field.addClass('autocompleter-ready');
-		field.selectionOffset(true); // Init selectionPosition too.
-	});
+			var exists = $('div#'+id+'-autocompleter');
+			if (!exists || exists.length < 1) {
+				$('<div class="autocompleter-popup'+(field.hasClass('debug') ? ' debug' : '')+'" id="'+id+'-autocompleter"></div>')
+					.css({'position': 'absolute', 'z-index': '99'})
+					.hide()
+						.appendTo($('body'));
+			}
+			field.addClass('autocompleter-ready');
+			field.selectionOffset(true); // Init selectionPosition too.
+		})
+		.live('focus.autocompleter', function(event){
+			var field = $(this),
+			    label = field.parents('label');
+
+			if (label.length < 1) return;
+
+			var i = $('i', label),
+			    span = $('span.autocompleter-help', i);
+			if (i.length > 0 && span.length < 1) {
+				$('<span class="autocompleter-help">'+Symphony.Language.get('Press CTRL with "i" for autocompleter')+'</span>').hide().appendTo(i).fadeIn('slow');
+			}
+			else if (span.length < 1) {
+				$('<i><span class="autocompleter-help">'+Symphony.Language.get('Press CTRL with "i" for autocompleter')+'</span></i>').hide().insertBefore(field).fadeIn('slow');
+			}
+		});
 
 
 	// This goes second, after initialization was done.
 	$('.autocompleter:not(.autocompleter-started)')
 		.live('keydown.autocompleter', function(event){
-			var forced = (event.which == 32 && event.ctrlKey);
+			var forced = (event.which == 73 && event.ctrlKey);
 
 			if (forced || event.which == $(this).attr('data-autocompleterkeycode')) {
 				var field = $(this),
@@ -114,23 +134,42 @@
 				if (!forced && prefixedcommand != val.substr(start - prefixedcommand.length, prefixedcommand.length)) return;
 
 				// TODO: this should be calculated after timeout triggers, so it will be always correct and will not be calculated everytime command restarts
-				autocompleter.startedAt = val.substr(0, start - (forced ? 0 : command.length - 1/* substract what was not added to val yet (we are in keydown, not keyup) */));
+				autocompleter.startedAfter = val.substr(0, start - (forced ? 0 : command.length - 1/* substract what was not added to val yet (we are in keydown, not keyup) */));
 				autocompleter.endedBefore = val.substr(start);
 
 				if (!forced) {
-					field.val(autocompleter.startedAt + autocompleter.endedBefore);
-					this.setSelectionRange(autocompleter.startedAt.length, autocompleter.startedAt.length);
+					field.val(autocompleter.startedAfter + autocompleter.endedBefore);
+					this.setSelectionRange(autocompleter.startedAfter.length, autocompleter.startedAfter.length);
+				}
+
+				// Enable debug if forced with SHIFT key 
+				if (forced && event.shiftKey) {
+					field.addClass('debug');
+				}
+				else {
+					field.removeClass('debug');
 				}
 
 				if (autocompleter.timer != null) clearTimeout(autocompleter.timer);
 				autocompleter.timer = setTimeout(function(){
 					field.trigger('autocomplete');
 				}, interval);
+
+				return false;
 			}
 		})
 		.live('autocomplete.autocompleter', function(){
 			autocompleter.ignorekey = false;
-			$(this)
+			var field = $(this);
+
+			if (field.hasClass('debug')) {
+				$('div#'+field.attr('id')+'-autocompleter').addClass('debug');
+			}
+			else {
+				$('div#'+field.attr('id')+'-autocompleter').removeClass('debug');
+			}
+
+			field
 				.addClass('autocompleter-started')
 				.bind('keydown.autocompleter', function(event){
 					event.type = 'preprocess';
@@ -145,6 +184,8 @@
 					return event.result;
 				})
 				.trigger('process');
+
+			field.parents('label').find('span.autocompleter-help').html(Symphony.Language.get('Autocompleter is ON')).addClass('warning');
 		});
 
 
@@ -159,10 +200,12 @@
 
 			$(this).unbind('keydown.autocompleter').unbind('keyup.autocompleter').unbind('blur.autocompleter').removeClass('autocompleter-started');
 			$('div#'+$(this).attr('id')+'-autocompleter').trigger('stop').slideUp('fast');
+
+			$(this).parents('label').find('span.autocompleter-help').html(Symphony.Language.get('Press CTRL with "i" for autocompleter')).removeClass('warning');
 		})
 		.live('cancel.autocompleter', function(event){
-			$(this).val(autocompleter.startedAt + autocompleter.endedBefore);
-			this.setSelectionRange(autocompleter.startedAt.length, autocompleter.startedAt.length);
+			$(this).val(autocompleter.startedAfter + autocompleter.endedBefore);
+			this.setSelectionRange(autocompleter.startedAfter.length, autocompleter.startedAfter.length);
 
 			$(this).trigger('stop');
 		})
@@ -172,8 +215,8 @@
 			if (item.length > 0) {
 				var data = item.attr('data-drop') || item.attr('data-value');
 				if (data) {
-					$(this).val(autocompleter.startedAt + data + autocompleter.endedBefore);
-					this.setSelectionRange(autocompleter.startedAt.length + data.length, autocompleter.startedAt.length + data.length);
+					$(this).val(autocompleter.startedAfter + data + autocompleter.endedBefore);
+					this.setSelectionRange(autocompleter.startedAfter.length + data.length, autocompleter.startedAfter.length + data.length);
 				}
 				autocompleter.ignorekey = !item.hasClass('continue');
 				item.trigger('confirm');
@@ -197,8 +240,8 @@
 			});
 
 			if (data.length) {
-				$(this).val(autocompleter.startedAt + data + autocompleter.endedBefore);
-				this.setSelectionRange(autocompleter.startedAt.length + data.length, autocompleter.startedAt.length + data.length);
+				$(this).val(autocompleter.startedAfter + data + autocompleter.endedBefore);
+				this.setSelectionRange(autocompleter.startedAfter.length + data.length, autocompleter.startedAfter.length + data.length);
 			}
 
 			if (autocompleter.ignorekey) {
@@ -208,11 +251,11 @@
 		.live('preview.autocompleter', function(event, preview){
 			if (!preview) return;
 
-			var val = autocompleter.startedAt + preview + autocompleter.endedBefore,
+			var val = autocompleter.startedAfter + preview + autocompleter.endedBefore,
 			    pos = this.selectionStart;
 
 			$(this).val(val);
-			this.setSelectionRange(pos, pos + (preview.length - (pos - autocompleter.startedAt.length)));
+			this.setSelectionRange(pos, pos + (preview.length - (pos - autocompleter.startedAfter.length)));
 		})
 		.live('preprocess.autocompleter', function(event){
 			autocompleter.ignorekey = true;
