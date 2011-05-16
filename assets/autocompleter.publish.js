@@ -298,7 +298,17 @@
 		.live('process.autocompleter', function(event){
 			if (autocompleter.ignorekey) return;
 
-			var text = $(this).val(),
+			var field = $(this),
+				word = field.val().substr(autocompleter.startedAfter.length, this.selectionStart - autocompleter.startedAfter.length),
+				popup = $('div#'+$(this).attr('id')+'-autocompleter');
+
+			popup
+				.hide()
+				.empty()
+				.trigger('autocomplete', [word])
+				.trigger('highlightnext');
+
+			var text = field.val(),
 				data = {
 					start: autocompleter.startedAfter.length,
 					end: text.length - autocompleter.endedBefore.length - autocompleter.startedAfter.length,
@@ -307,23 +317,16 @@
 					editedWordPre: text.substr(autocompleter.startedAfter.length, this.selectionStart - autocompleter.startedAfter.length),
 					editedWordPost: text.substr(this.selectionStart, this.selectionEnd - this.selectionStart),
 					editedLinePre: ''
-				},
-				popup = $('div#'+$(this).attr('id')+'-autocompleter');
-
+				};
 			data.pre += data.editedWordPre;
 			data.editedLinePre = data.pre.match(/[^\n]+$/);
 			data.editedLinePre = (data.editedLinePre && data.editedLinePre.length > 0 ? data.editedLinePre[0] : '');
 
-			popup
-				.hide()
-				.html('<p class="debug">scrollLeft: '+this.scrollLeft+'<br />pre: '+data.editedLinePre+'<br />edited: '+data.editedWordPre+'<br />post: '+data.editedWordPost+'</p>')
-				.trigger('autocomplete', [data])
-				.trigger('highlightnext');
-
-			var o = $(this).selectionOffset(false, data);
+			var o = field.selectionOffset(false, data);
 
 			popup
 				.css(o)
+				.prepend('<p class="debug">scrollLeft: '+this.scrollLeft+'<br />pre: '+data.editedLinePre+'<br />edited: '+data.editedWordPre+'<br />post: '+data.editedWordPost+'</p>')
 				.slideDown('fast');
 		});
 

@@ -18,8 +18,8 @@
 			}
 		});
 
-		$('div.autocompleter-popup').live('autocomplete.autocompleter', function(event, info){
-			var m = info.editedWordPre.match(/(^|\s+)?\/([^\/]+|)(\/(.*)|)/);
+		$('div.autocompleter-popup').live('autocomplete.autocompleter', function(event, word){
+			var m = word.match(/(^|\s+)?\/([^\/]+|)(\/(.*)|)/);
 			if (!m) m = [];
 
 			var popup = $(this);
