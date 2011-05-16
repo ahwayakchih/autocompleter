@@ -259,6 +259,7 @@
 		})
 		.live('preprocess.autocompleter', function(event){
 			autocompleter.ignorekey = true;
+
 			switch (event.which) {
 				case 9: // TAB
 					$('div#'+$(this).attr('id')+'-autocompleter').trigger('highlightnext', [event.shiftKey ? -1 : 1]);
@@ -272,16 +273,21 @@
 					$(this).trigger(event.ctrlKey ? 'confirmall' : 'confirm');
 					return false;
 					break;
+				case 38: // up arrow
+				case 40: // down arrow
+					$('div#'+$(this).attr('id')+'-autocompleter').trigger('highlightnext', [event.which == 38 ? -1 : 1]);
+					return false;
+					break;
 				case 37: // left arrow
-					this.setSelectionRange(this.selectionStart - 1, this.selectionEnd);
+					// We do not allow selecting outside of original area
+					this.setSelectionRange(Math.max(this.selectionStart - 1, autocompleter.startedAfter.length), this.selectionEnd);
 					autocompleter.ignorekey = false;
-					// TODO: cancel after going outside of original selection area
 					return false;
 					break;
 				case 39: // right arrow
+					// We do not allow selecting outside of original area
 					this.setSelectionRange(this.selectionStart + 1, this.selectionEnd);
 					autocompleter.ignorekey = false;
-					// TODO: cancel after going outside of original selection area
 					return false;
 					break;
 				default:
@@ -291,14 +297,34 @@
 		})
 		.live('process.autocompleter', function(event){
 			if (autocompleter.ignorekey) return;
-			var o = $(this).selectionOffset();
 
-			$($('div#'+$(this).attr('id')+'-autocompleter'))
-				.css(o)
-				.html('<p class="debug">scrollLeft: '+this.scrollLeft+'<br />pre: '+o.editedLinePre+'<br />edited: '+o.editedWordPre+'<br />post: '+o.editedWordPost+'</p>')
-				.slideDown('fast')
-				.trigger('autocomplete', [o])
+			var text = $(this).val(),
+				data = {
+					start: autocompleter.startedAfter.length,
+					end: text.length - autocompleter.endedBefore.length - autocompleter.startedAfter.length,
+					pre: autocompleter.startedAfter,
+					post: autocompleter.endedBefore,
+					editedWordPre: text.substr(autocompleter.startedAfter.length, this.selectionStart - autocompleter.startedAfter.length),
+					editedWordPost: text.substr(this.selectionStart, this.selectionEnd - this.selectionStart),
+					editedLinePre: ''
+				},
+				popup = $('div#'+$(this).attr('id')+'-autocompleter');
+
+			data.pre += data.editedWordPre;
+			data.editedLinePre = data.pre.match(/[^\n]+$/);
+			data.editedLinePre = (data.editedLinePre && data.editedLinePre.length > 0 ? data.editedLinePre[0] : '');
+
+			popup
+				.hide()
+				.html('<p class="debug">scrollLeft: '+this.scrollLeft+'<br />pre: '+data.editedLinePre+'<br />edited: '+data.editedWordPre+'<br />post: '+data.editedWordPost+'</p>')
+				.trigger('autocomplete', [data])
 				.trigger('highlightnext');
+
+			var o = $(this).selectionOffset(false, data);
+
+			popup
+				.css(o)
+				.slideDown('fast');
 		});
 
 })(jQuery.noConflict());
