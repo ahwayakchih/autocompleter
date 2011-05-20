@@ -13,9 +13,20 @@
 		'Autocompleter is ON': false
 	});
 
-	// TODO: make extension output context data with information about .autocompleter fields.
-	//		That way we will not have to add class inside extension (which works only for textarea and textbox fields,
-	//      but not for input field - because it does not generate delegate which allows for modification of element attributes)
+	// Initialize autocompleter enabled fields data.
+	var params = Symphony.Context.get('autocompleter');
+	$(document).ready(function(){
+		$('div.field input, div.field textarea').each(function(i, item){
+			var field = $(this),
+				fieldID = field.parents('div[id]').attr('id').replace('field-','');
+
+			if (params && params['fields'] && params['fields'][fieldID]) {
+				field
+					.addClass('autocompleter')
+					.attr('data-autocompleterurl', params['fields'][fieldID]['url'] || '');
+			}
+		});
+	});
 
 	// TODO: add generic autocompleter "plugin", which will allow for searching all sections and not depend on SubsectionManager fields.
 
@@ -31,11 +42,11 @@
 			    highlighted = $('.item.highlighted', popup);
 
 			if (!highlighted || highlighted.length < 1) {
-				highlighted = $('.item:first-child', popup).addClass('highlighted');
+				highlighted = $('.item:first', popup).addClass('highlighted');
 			}
 			else {
-				var items = $(popup).find('.item'),
-				    index = $(items).index(highlighted) + (direction > 0 ? 1 : -1);
+				var items = popup.find('.item'),
+				    index = items.index(highlighted) + (direction > 0 ? 1 : -1);
 
 				if (items.length == 1) return; // No need to highlight already highlighted item :).
 
@@ -81,7 +92,7 @@
 			var field = $(this),
 				fieldID = field.parents('div[id]').attr('id').replace('field-',''),
 				fieldHandle = field.attr('name').replace(/^fields\[([^\]]+)\]/i, '$1'),
-			    id = $(this).attr('id');
+			    id = field.attr('id');
 
 			if (!id) {
 				id = field.attr('name') || String(new Date().getTime()) + String(Math.random()).replace('0.', '');
@@ -94,10 +105,12 @@
 				$('<div class="autocompleter-popup'+(field.hasClass('debug') ? ' debug' : '')+'" id="'+id+'-autocompleter"></div>')
 					.css({'position': 'absolute', 'z-index': '99'})
 					.hide()
-						.appendTo($('body'));
+					.appendTo($('body'));
 			}
-			field.addClass('autocompleter-ready');
-			field.selectionOffset(true); // Init selectionPosition too.
+
+			field
+				.addClass('autocompleter-ready')
+				.selectionOffset(true); // Init selectionPosition too.
 		})
 		.live('focus.autocompleter', function(event){
 			var field = $(this),
@@ -107,6 +120,7 @@
 
 			var i = $('i', label),
 			    span = $('span.autocompleter-help', i);
+
 			if (i.length > 0 && span.length < 1) {
 				$('<span class="autocompleter-help">'+Symphony.Language.get('Press CTRL with "i" for autocompleter')+'</span>').hide().appendTo(i).fadeIn('slow');
 			}
@@ -119,31 +133,17 @@
 	// This goes second, after initialization was done.
 	$('.autocompleter:not(.autocompleter-started)')
 		.live('keydown.autocompleter', function(event){
-			var forced = (event.which == 73 && event.ctrlKey);
-
-			if (forced || event.which == $(this).attr('data-autocompleterkeycode')) {
+			if (event.which == 73 && event.ctrlKey) { // CTRL + i
 				var field = $(this),
-					interval = field.attr('data-autocompleterinterval') || 300,
-				    command = field.attr('data-autocompletercommand'),
-					prefix = field.attr('data-autocompleterprefix'),
-					prefixedcommand = prefix + command.substr(0,-1);/* substract what was not added to val yet (we are in keydown, not keyup) */
-
-				var val = field.val(),
-					start = this.selectionStart;
-
-				if (!forced && prefixedcommand != val.substr(start - prefixedcommand.length, prefixedcommand.length)) return;
+					interval = params['interval'] || 300,
+					val = field.val();
 
 				// TODO: this should be calculated after timeout triggers, so it will be always correct and will not be calculated everytime command restarts
-				autocompleter.startedAfter = val.substr(0, start - (forced ? 0 : command.length - 1/* substract what was not added to val yet (we are in keydown, not keyup) */));
-				autocompleter.endedBefore = val.substr(start);
-
-				if (!forced) {
-					field.val(autocompleter.startedAfter + autocompleter.endedBefore);
-					this.setSelectionRange(autocompleter.startedAfter.length, autocompleter.startedAfter.length);
-				}
+				autocompleter.startedAfter = val.substr(0, this.selectionStart);
+				autocompleter.endedBefore = val.substr(this.selectionEnd);
 
 				// Enable debug if forced with SHIFT key 
-				if (forced && event.shiftKey) {
+				if (event.shiftKey) {
 					field.addClass('debug');
 				}
 				else {
@@ -305,8 +305,11 @@
 			popup
 				.hide()
 				.empty()
-				.trigger('autocomplete', [word])
-				.trigger('highlightnext');
+				.trigger('autocomplete', [word]);
+
+			if (word.indexOf(popup.find('li.item:first').attr('data-preview')) == 0)
+				popup.trigger('highlightnext');
+
 
 			var text = field.val(),
 				data = {

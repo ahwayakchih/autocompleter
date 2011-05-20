@@ -2,11 +2,12 @@
 	Class extension_autocompleter extends Extension{
 
 		private static $foundFields;
+		private static $settings;
 
 		public function about(){
 			return array('name' => 'Autocompleter',
-						 'version' => '1.0',
-						 'release-date' => '2011-05-01',
+						 'version' => '1.1',
+						 'release-date' => '2011-05-17',
 						 'author' => array('name' => 'Marcin Konicki',
 										   'website' => 'http://ahwayakchih.neoni.net',
 										   'email' => 'ahwayakchih@neoni.net'),
@@ -19,14 +20,24 @@
 				CREATE TABLE IF NOT EXISTS tbl_autocompleter_fields (
 					`field_id` int unsigned,
 					`section_id` int unsigned,
-					`command` varchar(12) DEFAULT "",
-					`prefix` varchar(12) DEFAULT "",
-					`interval` int unsigned DEFAULT 0,
-					`keyCode` int DEFAULT -1,
+					`url` varchar(255) DEFAULT "",
 					PRIMARY KEY (`field_id`),
 					INDEX section_id (`section_id`)
 				)
 			')) return false;
+		}
+
+		public function update($previousVersion=false) {
+			if (!$this->install()) return false;
+
+			if (version_compare($previousVersion, '1.1', '<')) {
+				Symphony::Database()->query('ALTER TABLE tbl_autocompleter_fields DROP COLUMN `command`');
+				Symphony::Database()->query('ALTER TABLE tbl_autocompleter_fields DROP COLUMN `interval`');
+				Symphony::Database()->query('ALTER TABLE tbl_autocompleter_fields DROP COLUMN `keyCode`');
+				Symphony::Database()->query('ALTER TABLE tbl_autocompleter_fields ADD COLUMN `url` VARCHAR(255) DEFAULT ""');
+			}
+
+			return true;
 		}
 
 		public function uninstall() {
@@ -35,24 +46,6 @@
 
 		public function getSubscribedDelegates(){
 			return array(
-				// TextArea field
-				array(
-					'page' => '/backend/',
-					'delegate' => 'ModifyTextareaFieldPublishWidget',
-					'callback' => '__ModifyTextareaFieldPublishWidget',
-				),
-				// TextBox extension
-				array(
-					'page' => '/backend/',
-					'delegate' => 'ModifyTextBoxInlineFieldPublishWidget',
-					'callback' => '__ModifyTextareaFieldPublishWidget',
-				),
-				// TextBox extension
-				array(
-					'page' => '/backend/',
-					'delegate' => 'ModifyTextBoxFullFieldPublishWidget',
-					'callback' => '__ModifyTextareaFieldPublishWidget',
-				),
 				// Symphony
 				array(
 					'page' => '/blueprints/sections/',
@@ -70,45 +63,33 @@
 					'callback' => '__InitaliseAdminPageHead'
 				),
 				array(
-					'page' => '/backend/',
-					'delegate' => 'AdminPagePreGenerate',
-					'callback' => '__AdminPagePreGenerate',
+					'page' => '/system/preferences/',
+					'delegate' => 'AddCustomPreferenceFieldsets',
+					'callback' => '__AddCustomPreferenceFieldsets',
 				),
 				array(
-					'page' => '/backend/',
-					'delegate' => 'AdminPagePostGenerate',
-					'callback' => '__AdminPagePostGenerate',
+					'page' => '/system/preferences/',
+					'delegate' => 'Save',
+					'callback' => '__SaveCustomPreferenceData',
 				),
 			);
-		}
-
-		public function __ModifyTextareaFieldPublishWidget($ctx) {
-			// context array contains: &$field, &$label, &$textarea
-
-			$value = Symphony::Database()->fetchRow(0, '
-				SELECT *
-				FROM tbl_autocompleter_fields	
-				WHERE `field_id` = '.$ctx['field']->get('id').' AND `section_id` = '.$ctx['field']->get('parent_section').' AND `keyCode` > -1'
-			);
-			if (empty($value) || empty($value['command'])) return;
-
-			$element = NULL;
-			if (!empty($ctx['textarea'])) $element = 'textarea';
-			else if (!empty($ctx['input'])) $element = 'input';
-			else return;
-
-			$ctx[$element]->setAttribute('class', trim($ctx[$element]->getAttribute('class')).' autocompleter');
-			$ctx[$element]->setAttribute('data-autocompletercommand', $value['command']);
-			$ctx[$element]->setAttribute('data-autocompleterprefix', $value['prefix']);
-			$ctx[$element]->setAttribute('data-autocompleterinterval', ($value['interval'] >= 0 ? $value['interval'] : '0'));
-			$ctx[$element]->setAttribute('data-autocompleterkeycode', $value['keyCode']);
-			self::$foundFields = true;
 		}
 
 		public function __InitaliseAdminPageHead() {
 			$callback = Symphony::Engine()->getPageCallback();
+			if (!is_array($callback['context'])) return;
 
-			if ($callback['driver'] != 'blueprintssections' || !is_array($callback['context'])) return;
+			if ($callback['driver'] == 'blueprintssections') {
+				$this->__InitHeadSectionSettings($callback);
+			}
+			else if ($callback['driver'] == 'publish') {
+				$this->__InitHeadPublish($callback);
+			}
+		}
+
+		private function __InitHeadSectionSettings($callback) {
+			$js = array();
+			$settings = self::settings();
 
 			if ($callback['context'][0] == 'edit' && is_numeric($callback['context'][1])) {
 				$values = Symphony::Database()->fetch('
@@ -118,84 +99,163 @@
 					'field_id'
 				);
 				if (!empty($values)) {
-					Administration::instance()->Page->addElementToHead(
-						new XMLElement(
-							'script',
-							"Symphony.Context.add('autocompleter', " . json_encode(array('fields' => $values)) . ");",
-							array('type' => 'text/javascript')
-						), 100
-					);
+					$js['fields'] = $values;
 				}
 			}
 
+			$js['source_url'] = $settings['source_url'];
+
+			Administration::instance()->Page->addElementToHead(
+				new XMLElement(
+					'script',
+					"Symphony.Context.add('autocompleter', " . json_encode($js) . ");",
+					array('type' => 'text/javascript')
+				), 100
+			);
+
 			// Append scripts and styles for field settings pane
-			Administration::instance()->Page->addScriptToHead(URL . '/extensions/autocompleter/assets/autocompleter.settings.js', 101, false);
-			Administration::instance()->Page->addStylesheetToHead(URL . '/extensions/autocompleter/assets/autocompleter.settings.css', 'screen', 101, false);
+			Administration::instance()->Page->addScriptToHead(URL . '/extensions/autocompleter/assets/autocompleter.blueprintssections.js', 101, false);
+			Administration::instance()->Page->addStylesheetToHead(URL . '/extensions/autocompleter/assets/autocompleter.blueprintssections.css', 'screen', 101, false);
 		}
 
-		// Adds script and css to head right before page rendering.
-		// That way we're sure that there is a need to add our script.
-		public function __AdminPagePreGenerate($ctx) {
-			// context array contains: &$oPage
+		private function __InitHeadPublish($callback) {
+			if (empty($callback['context']['section_handle'])) return;
 
-			if (!self::$foundFields) return;
+			$settings = self::settings();
 
-			$ctx['oPage']->addScriptToHead(URL . '/extensions/autocompleter/lib/jQuery.selectionPosition/jquery.selectionposition.js', 100, false);
-			$ctx['oPage']->addScriptToHead(URL . '/extensions/autocompleter/assets/autocompleter.publish.js', 101, false);
-			$ctx['oPage']->addStylesheetToHead(URL . '/extensions/autocompleter/assets/autocompleter.publish.css', 'screen', 101, false);
+			$sm = new SectionManager(Symphony::Engine());
+			$section_id = $sm->fetchIDFromHandle($callback['context']['section_handle']);
 
-			$callback = Symphony::Engine()->getPageCallback();
-			if (!empty($callback['context']['section_handle'])) {
+			$js = array('section_id' => $section_id);
+			$js['fields'] = Symphony::Database()->fetch('
+				SELECT `field_id`, `section_id`'.($settings['source_url'] == 'yes' ? ', `url`' : '').'
+				FROM tbl_autocompleter_fields	
+				WHERE `section_id` = '.intval($section_id),
+				'field_id'
+			);
+			if (empty($js['fields'])) return;
+
+			if ($settings['source_subsectionmanager'] == 'yes') {
 				// Use Subsection Manager fields as one of the data sources
-
-				$sm = new SectionManager(Symphony::Engine());
-				$section_id = $sm->fetchIDFromHandle($callback['context']['section_handle']);
 				$section = $sm->fetch($section_id);
-
-				$fm = new FieldManager(Symphony::Engine());
 				$fields = $section->fetchFields('subsectionmanager');
-
-				$js = array();
 				foreach ($fields as $field) {
-					$js[$field->get('element_name')] = array(
+					$js['subsectionmanager'][$field->get('element_name')] = array(
 						'id' => $field->get('id'),
 						'label' => $field->get('label'),
 					);
 				}
+			}
 
-				if (!empty($js)) {
-					$ctx['oPage']->addScriptToHead(URL . '/extensions/autocompleter/assets/autocompleter.subsectionmanager.js', 101, false);
-					// Let our script know about subsection manager fields.
-					$ctx['oPage']->addElementToHead(
-						new XMLElement(
-							'script',
-							"Symphony.Context.add('autocompleter', " . json_encode(array('subsectionmanager' => $js, 'section_id' => $section_id)) . ");",
-							array('type' => 'text/javascript')
-						), 101
-					);
-				}
+			$js['interval'] = $settings['interval'];
+
+			// Let our script know about supported fields fields.
+			Administration::instance()->Page->addElementToHead(
+				new XMLElement(
+					'script',
+					"Symphony.Context.add('autocompleter', " . json_encode($js) . ");",
+					array('type' => 'text/javascript')
+				), 100
+			);
+
+			// Last but not least, add our scripts.
+			Administration::instance()->Page->addScriptToHead(URL . '/extensions/autocompleter/lib/jQuery.selectionPosition/jquery.selectionposition.js', 100, false);
+			Administration::instance()->Page->addScriptToHead(URL . '/extensions/autocompleter/assets/autocompleter.publish.js', 151, false);
+			Administration::instance()->Page->addStylesheetToHead(URL . '/extensions/autocompleter/assets/autocompleter.publish.css', 'screen', 151, false);
+
+			if (!empty($js['subsectionmanager'])) {
+				Administration::instance()->Page->addScriptToHead(URL . '/extensions/autocompleter/assets/autocompleter.subsectionmanager.js', 152, false);
+			}
+
+			if ($settings['source_url'] == 'yes') {
+				Administration::instance()->Page->addScriptToHead(URL . '/extensions/autocompleter/assets/autocompleter.url.js', 152, false);
+			}
+
+			if (!empty($settings['css'])) {
+				Administration::instance()->Page->addStylesheetToHead(($settings['css'][0] == '/' ? URL : '') . $settings['css'], 'screen', 152, false);
 			}
 		}
 
 		public function __FieldPostEdit($ctx) {
 			// context array contains: &$field, &$data
 
-			if (!isset($ctx['data']) || !isset($ctx['data']['autocompleter']) || !in_array($ctx['data']['type'], array('textarea', 'textbox'))) return;
+			if (!isset($ctx['data']) || !isset($ctx['data']['autocompleter']) || !in_array($ctx['data']['type'], array('input', 'textarea', 'textbox'))) return;
 
 			$fields = array(
 				'field_id' => intval($ctx['field']->get('id')),
 				'section_id' => intval($ctx['field']->get('parent_section')),
-				'command' => $ctx['data']['autocompleter']['command'],
-				'prefix' => $ctx['data']['autocompleter']['prefix'],
-				'interval' => intval($ctx['data']['autocompleter']['interval']),
-				'keyCode' => self::findKeyCode($ctx['data']['autocompleter']['command']),
+				'url' => trim($ctx['data']['autocompleter']['url'])
 			);
 
 			Symphony::Database()->query("DELETE FROM tbl_autocompleter_fields WHERE section_id = {$fields['section_id']} AND field_id = {$fields['field_id']}");
 
-			if (!empty($fields['command'])) {
+			if ($ctx['data']['autocompleter']['enabled'] == 'Yes') {
 				Symphony::Database()->insert($fields, 'tbl_autocompleter_fields');
 			}
+		}
+
+		public function __AddCustomPreferenceFieldsets($ctx) {
+			// context array contains: &$wrapper
+
+			$settings = self::settings();
+
+			$group = new XMLElement('fieldset');
+			$group->setAttribute('class', 'settings');
+			$group->appendChild(new XMLElement('legend', __('Autocompleter')));			
+
+			$div = new XMLElement('div');
+			$div->setAttribute('class', 'group');
+
+			// Set how much time script will wait before launching autocompletion search
+			$label = Widget::Label(__('Interval (milliseconds)'));
+			$label->appendChild(Widget::Input('autocompleter[interval]', $settings['interval']));
+			$div->appendChild($label);
+
+			// Set additional CSS file
+			$label = Widget::Label(__('URL to CSS file'));
+			$label->appendChild(Widget::Input('autocompleter[css]', $settings['css']));
+			$div->appendChild($label);
+
+			$group->appendChild($div);
+
+			// Disable/Enable Subsection Manager source
+			$label = Widget::Label();
+			$input = Widget::Input('autocompleter[source_subsectionmanager]', 'yes', 'checkbox');
+			if ($settings['source_subsectionmanager'] == 'yes') $input->setAttribute('checked', 'checked');
+			$label->setValue(__('%s Use Subsection Manager fields as source for autocompletion', array($input->generate())));
+			$group->appendChild($label);
+
+			// Disable/Enable URL source
+			$label = Widget::Label();
+			$input = Widget::Input('autocompleter[source_url]', 'yes', 'checkbox');
+			if ($settings['source_url'] == 'yes') $input->setAttribute('checked', 'checked');
+			$label->setValue(__('%s Allow to setup URL source for each field that has autocompleter enabled', array($input->generate())));
+			$group->appendChild($label);
+					
+			$ctx['wrapper']->appendChild($group);
+		}
+
+		public function __SaveCustomPreferenceData($ctx) {
+			// context array contains: &$settings, &$errors
+			$css = str_replace(array('"',"'",'<','>','javascript'), '', trim($_POST['autocompleter']['css']));
+			if ($css[0] != '/' && !preg_match('%^(https?|ftp)://%i', $css)) $css = '';
+
+			$settings = array(
+				'interval' => intval($_POST['autocompleter']['interval']),
+				'source_subsectionmanager' => ($_POST['autocompleter']['source_subsectionmanager'] == 'yes' ? 'yes' : 'no'),
+				'source_url' => ($_POST['autocompleter']['source_url'] == 'yes' ? 'yes' : 'no'),
+				'css' => $css
+			);
+			$php = '<'."?php\n\n".'$settings = '.var_export($settings, true).';';
+			file_put_contents(MANIFEST . '/autocompleter.php', $php);
+		}
+
+		private static function settings() {
+		    if (!is_array(self::$settings) && file_exists(MANIFEST . '/autocompleter.php')) {
+				@include_once(MANIFEST . '/autocompleter.php');
+				self::$settings = (is_array($settings) ? $settings : array());
+			}
+			return self::$settings;
 		}
 
 		private static function findKeyCode($text) {

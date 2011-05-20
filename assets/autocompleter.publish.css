@@ -16,7 +16,7 @@ div.autocompleter-popup {
 	box-shadow: 2px 2px 8px rgba(0, 0, 0, 0.3);
 }
 
-ul.autocompleter-subsectionmanager, ul.autocompleter-subsectionmanager li {
+div.autocompleter-popup ul, div.autocompleter-popup ul li {
 	margin: 0px;
 	padding: 0px;
 }
@@ -37,6 +37,45 @@ div.autocompleter-popup .item:last-child {
 div.autocompleter-popup .item.highlighted {
 	background: #E6E6E5;
 	color: #222;
+}
+
+@keyframes loading {
+	0% {
+		padding: 0px;
+	}
+	50% {
+		padding: 0px 50px;
+	}
+	100% {
+		padding: 0px;
+	}
+}
+@-webkit-keyframes loading {
+	0% {
+		padding: 0px;
+	}
+	50% {
+		padding: 0px 50px;
+	}
+	100% {
+		padding: 0px;
+	}
+}
+div.autocompleter-popup p.loading {
+	margin: 0px;
+	padding: 0px;
+	content: '...';
+	color: #fff;
+	animation-name: loading;
+	animation-duration: 10s;
+	animation-iteration-count: infinite;
+	animation-direction: alternate;
+	animation-timing-function: ease-in-out;
+	-webkit-animation-name: loading;
+	-webkit-animation-duration: 10s;
+	-webkit-animation-iteration-count: infinite;
+	-webkit-animation-direction: alternate;
+	-webkit-animation-timing-function: ease-in-out;
 }
 
 div.autocompleter-popup p.debug {
