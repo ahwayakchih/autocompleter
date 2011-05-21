@@ -78,9 +78,10 @@
 					if (cache[word]) {
 						popup.append(cache[word]);
 
-						var text = popup.find('li.item:first').attr('data-preview');
+						var item = popup.find('li.item:first'),
+							text = item.attr('data-preview');
 						if (text && text.indexOf(word) == 0)
-							popup.trigger('highlightnext');
+							popup.trigger('highlightitem', [item]);
 
 						return;
 					}
@@ -101,9 +102,10 @@
 						cache[word] = data;
 						popup.find('p.loading.autocompleter-url').replaceWith(data);
 
-						var text = popup.find('li.item:first').attr('data-preview');
+						var item = popup.find('li.item:first'),
+							text = item.attr('data-preview');
 						if (text && text.indexOf(word) == 0)
-							popup.trigger('highlightnext');
+							popup.trigger('highlightitem', [item]);
 					}
 				});
 			})
