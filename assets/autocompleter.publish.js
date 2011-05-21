@@ -28,8 +28,6 @@
 		});
 	});
 
-	// TODO: add generic autocompleter "plugin", which will allow for searching all sections and not depend on SubsectionManager fields.
-
 	// TODO: remove this and keep per-field state
 	var autocompleter = {
 		timer: null,
@@ -46,7 +44,7 @@
 			}
 			else {
 				var items = popup.find('.item'),
-				    index = items.index(highlighted) + (direction > 0 ? 1 : -1);
+				    index = items.index(highlighted) + (direction < 0 ? -1 : 1);
 
 				if (items.length == 1) return; // No need to highlight already highlighted item :).
 
@@ -59,6 +57,16 @@
 			}
 
 			$(highlighted).trigger('highlighted', [true]);
+		})
+		.live('highlightitem.autocompleter', function(event, item){
+			var popup = $(this),
+			    highlighted = $('.item.highlighted', popup);
+
+			if (highlighted && highlighted.length > 0) {
+				highlighted.removeClass('highlighted').trigger('highlighted', [false]);
+			}
+
+			item.addClass('highlighted').trigger('highlighted', [true]);
 		});
 
 	$('div.autocompleter-popup li.item:not(.highlighted)')
@@ -70,18 +78,17 @@
 		});
 
 	$('div.autocompleter-popup li.item.highlighted')
-		.live('highlighted', function(event){
+		.live('highlighted', function(event, enabled){
+			if (!enabled) return;
 
 			var id = $(this).parents('div.autocompleter-popup').attr('id').replace(/-autocompleter$/, ''),
 			    preview = $(this).attr('data-preview');
 
 			if (preview) $('#'+id).trigger('preview', [preview]);
-
-		}).live('click', function(event){
-
+		})
+		.live('click', function(event){
 			var id = $(this).parents('div.autocompleter-popup').attr('id').replace(/-autocompleter$/, '');
 			$('#'+id).focus().trigger('confirm').trigger('process');
-
 		});
 
 
@@ -135,7 +142,6 @@
 		.live('keydown.autocompleter', function(event){
 			if (event.which == 73 && event.ctrlKey) { // CTRL + i
 				var field = $(this),
-					interval = params['interval'] || 300,
 					val = field.val();
 
 				// TODO: this should be calculated after timeout triggers, so it will be always correct and will not be calculated everytime command restarts
@@ -150,17 +156,15 @@
 					field.removeClass('debug');
 				}
 
-				if (autocompleter.timer != null) clearTimeout(autocompleter.timer);
-				autocompleter.timer = setTimeout(function(){
-					field.trigger('autocomplete');
-				}, interval);
+				field.trigger('autocomplete');
 
 				return false;
 			}
 		})
 		.live('autocomplete.autocompleter', function(){
 			autocompleter.ignorekey = false;
-			var field = $(this);
+			var field = $(this),
+				interval = params['interval'] || 300;
 
 			if (field.hasClass('debug')) {
 				$('div#'+field.attr('id')+'-autocompleter').addClass('debug');
@@ -178,10 +182,12 @@
 					return event.result;
 				})
 				.bind('keyup.autocompleter', function(event){
-					event.type = 'process';
-					$(this).trigger(event);
-					event.type = 'keyup';
-					return event.result;
+					var field = $(this);
+
+					if (autocompleter.timer != null) clearTimeout(autocompleter.timer);
+					autocompleter.timer = setTimeout(function(){
+						field.trigger('process');
+					}, interval);
 				})
 				.trigger('process');
 
@@ -278,6 +284,7 @@
 					$('div#'+$(this).attr('id')+'-autocompleter').trigger('highlightnext', [event.which == 38 ? -1 : 1]);
 					return false;
 					break;
+				case 8: // BACKSPACE
 				case 37: // left arrow
 					// We do not allow selecting outside of original area
 					this.setSelectionRange(Math.max(this.selectionStart - 1, autocompleter.startedAfter.length), this.selectionEnd);
@@ -306,10 +313,6 @@
 				.hide()
 				.empty()
 				.trigger('autocomplete', [word]);
-
-			if (word.indexOf(popup.find('li.item:first').attr('data-preview')) == 0)
-				popup.trigger('highlightnext');
-
 
 			var text = field.val(),
 				data = {
