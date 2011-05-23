@@ -90,13 +90,22 @@
 
 				popup.append('<p class="loading autocompleter-url">...</p>');
 
+				// Allow other scripts to override our request.
+				var options = {
+					'url': url,
+					'word': word,
+					'field': name,
+					'section': env['section_handle']
+				}
+				popup.trigger('preautocomplete', [options]);
+
 				$.ajax({
 					async: true,
 					type: 'GET',
 					dataType: 'html',
-					url: url,
+					url: options.url,
 					// We build string ourselves, otherwise slashes and other "special" characters will end up double-encoded :(
-					data: 'q='+word.replace(' ','+')+'&section='+env['section_handle']+'&field='+name,
+					data: 'q='+options.word.replace(' ','+')+'&section='+options.section+'&field='+options.field,
 					processData: false,
 					success: function(data) {
 						cache[word] = data;

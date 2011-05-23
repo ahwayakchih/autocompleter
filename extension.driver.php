@@ -172,7 +172,11 @@
 			}
 
 			if (!empty($settings['css'])) {
-				Administration::instance()->Page->addStylesheetToHead(($settings['css'][0] == '/' ? URL : '') . $settings['css'], 'screen', 152, false);
+				Administration::instance()->Page->addStylesheetToHead(($settings['css'][0] == '/' ? URL : '') . $settings['css'], 'screen', 153, false);
+			}
+
+			if (!empty($settings['js'])) {
+				Administration::instance()->Page->addScriptToHead(($settings['js'][0] == '/' ? URL : '') . $settings['js'], 153, false);
 			}
 		}
 
@@ -204,7 +208,7 @@
 			$group->appendChild(new XMLElement('legend', __('Autocompleter')));			
 
 			$div = new XMLElement('div');
-			$div->setAttribute('class', 'group');
+			$div->setAttribute('class', 'group triple');
 
 			// Set how much time script will wait before launching autocompletion search
 			$label = Widget::Label(__('Interval (milliseconds)'));
@@ -212,9 +216,20 @@
 			$div->appendChild($label);
 
 			// Set additional CSS file
-			$label = Widget::Label(__('URL to CSS file'));
+			$label = Widget::Label(__('Path or URL to custom CSS file'));
 			$label->appendChild(Widget::Input('autocompleter[css]', $settings['css']));
 			$div->appendChild($label);
+
+			// Set additional JS file
+			$d = new XMLElement('div');
+			$label = Widget::Label(__('Path or URL to custom JavaScript file'));
+			$label->appendChild(Widget::Input('autocompleter[js]', $settings['js']));
+			$d->appendChild($label);
+			$optionlist = new XMLElement('ul');
+			$optionlist->setAttribute('class', 'tags');
+			$optionlist->appendChild(new XMLElement('li', 'autocompleter.urlextended.js', array('class' => '/extensions/autocompleter/assets/autocompleter.urlextended.js', 'title' => 'Exact string value')));
+			$d->appendChild($optionlist);
+			$div->appendChild($d);
 
 			$group->appendChild($div);
 
@@ -240,11 +255,15 @@
 			$css = str_replace(array('"',"'",'<','>','javascript'), '', trim($_POST['autocompleter']['css']));
 			if ($css[0] != '/' && !preg_match('%^(https?|ftp)://%i', $css)) $css = '';
 
+			$js = str_replace(array('"',"'",'<','>','javascript'), '', trim($_POST['autocompleter']['js']));
+			if ($js[0] != '/' && !preg_match('%^(https?|ftp)://%i', $js)) $js = '';
+
 			$settings = array(
 				'interval' => intval($_POST['autocompleter']['interval']),
 				'source_subsectionmanager' => ($_POST['autocompleter']['source_subsectionmanager'] == 'yes' ? 'yes' : 'no'),
 				'source_url' => ($_POST['autocompleter']['source_url'] == 'yes' ? 'yes' : 'no'),
-				'css' => $css
+				'css' => $css,
+				'js' => $js
 			);
 			$php = '<'."?php\n\n".'$settings = '.var_export($settings, true).';';
 			file_put_contents(MANIFEST . '/autocompleter.php', $php);
