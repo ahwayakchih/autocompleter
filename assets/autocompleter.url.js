@@ -93,11 +93,17 @@
 				// Allow other scripts to override our request.
 				var options = {
 					'url': url,
-					'word': word,
+					'q': word,
 					'field': name,
 					'section': env['section_handle']
 				}
 				popup.trigger('preautocomplete', [options]);
+
+				var data = '';
+				$.each(options, function(key, value){
+					if (key == 'url') return true;
+					data += key + '=' + value.replace(' ', '+') + '&';
+				});
 
 				$.ajax({
 					async: true,
@@ -105,7 +111,7 @@
 					dataType: 'html',
 					url: options.url,
 					// We build string ourselves, otherwise slashes and other "special" characters will end up double-encoded :(
-					data: 'q='+options.word.replace(' ','+')+'&section='+options.section+'&field='+options.field,
+					data: data,
 					processData: false,
 					success: function(data) {
 						cache[word] = data;
