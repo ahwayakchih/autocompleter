@@ -17,6 +17,13 @@
 		var params = Symphony.Context.get('autocompleter'),
 			env = Symphony.Context.get('env');
 
+		$('.autocompleter:not(.autocompleter-started)')
+			.live('keydown.autocompleter', function(event){
+				if (event.which == 219 /* [ */ || event.which == 57 /* ( */) {
+					$(this).trigger('autocomplete');
+				}
+			});
+
 		$('div.autocompleter-popup')
 			.live('preautocomplete.autocompleter', function(event, options){
 				options.qmode = 'raw';

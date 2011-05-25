@@ -141,12 +141,7 @@
 	$('.autocompleter:not(.autocompleter-started)')
 		.live('keydown.autocompleter', function(event){
 			if (event.which == 73 && event.ctrlKey) { // CTRL + i
-				var field = $(this),
-					val = field.val();
-
-				// TODO: this should be calculated after timeout triggers, so it will be always correct and will not be calculated everytime command restarts
-				autocompleter.startedAfter = val.substr(0, this.selectionStart);
-				autocompleter.endedBefore = val.substr(this.selectionEnd);
+				var field = $(this);
 
 				// Enable debug if forced with SHIFT key 
 				if (event.shiftKey) {
@@ -164,7 +159,12 @@
 		.live('autocomplete.autocompleter', function(){
 			autocompleter.ignorekey = false;
 			var field = $(this),
-				interval = params['interval'] || 300;
+				interval = params['interval'] || 300,
+				val = field.val();
+
+			// TODO: this should be calculated after timeout triggers, so it will be always correct and will not be calculated everytime command restarts
+			autocompleter.startedAfter = val.substr(0, this.selectionStart);
+			autocompleter.endedBefore = val.substr(this.selectionEnd);
 
 			if (field.hasClass('debug')) {
 				$('div#'+field.attr('id')+'-autocompleter').addClass('debug');
