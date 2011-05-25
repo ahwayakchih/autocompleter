@@ -162,7 +162,6 @@
 				interval = params['interval'] || 300,
 				val = field.val();
 
-			// TODO: this should be calculated after timeout triggers, so it will be always correct and will not be calculated everytime command restarts
 			autocompleter.startedAfter = val.substr(0, this.selectionStart);
 			autocompleter.endedBefore = val.substr(this.selectionEnd);
 
@@ -188,8 +187,7 @@
 					autocompleter.timer = setTimeout(function(){
 						field.trigger('process');
 					}, interval);
-				})
-				.trigger('process');
+				});
 
 			field.parents('label').find('span.autocompleter-help').html(Symphony.Language.get('Autocompleter is ON')).addClass('warning');
 		});
