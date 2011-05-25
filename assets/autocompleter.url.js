@@ -117,6 +117,9 @@
 						cache[word] = data;
 						popup.find('p.loading.autocompleter-url').replaceWith(data);
 
+						// Do not highlight if word was empty
+						if (word.length < 1) return;
+
 						var item = popup.find('li.item:first'),
 							text = item.attr('data-preview');
 						if (text && text.indexOf(word) == 0)

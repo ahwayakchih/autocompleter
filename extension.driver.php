@@ -159,15 +159,16 @@
 			);
 
 			// Last but not least, add our scripts.
+			Administration::instance()->Page->addStylesheetToHead(URL . '/extensions/autocompleter/assets/autocompleter.publish.css', 'screen', 151, false);
 			Administration::instance()->Page->addScriptToHead(URL . '/extensions/autocompleter/lib/jQuery.selectionPosition/jquery.selectionposition.js', 100, false);
 			Administration::instance()->Page->addScriptToHead(URL . '/extensions/autocompleter/assets/autocompleter.publish.js', 151, false);
-			Administration::instance()->Page->addStylesheetToHead(URL . '/extensions/autocompleter/assets/autocompleter.publish.css', 'screen', 151, false);
 
 			if (!empty($js['subsectionmanager'])) {
 				Administration::instance()->Page->addScriptToHead(URL . '/extensions/autocompleter/assets/autocompleter.subsectionmanager.js', 152, false);
 			}
 
 			if ($settings['source_url'] == 'yes') {
+				Administration::instance()->Page->addStylesheetToHead(URL . '/extensions/autocompleter/assets/autocompleter.url.css', 'screen', 152, false);
 				Administration::instance()->Page->addScriptToHead(URL . '/extensions/autocompleter/assets/autocompleter.url.js', 152, false);
 			}
 
@@ -227,7 +228,7 @@
 			$d->appendChild($label);
 			$optionlist = new XMLElement('ul');
 			$optionlist->setAttribute('class', 'tags');
-			$optionlist->appendChild(new XMLElement('li', 'autocompleter.urlextended.js', array('class' => '/extensions/autocompleter/assets/autocompleter.urlextended.js', 'title' => 'Exact string value')));
+			$optionlist->appendChild(new XMLElement('li', 'autocompleter.urlextended.js', array('class' => '/extensions/autocompleter/assets/autocompleter.urlextended.js')));
 			$d->appendChild($optionlist);
 			$div->appendChild($d);
 

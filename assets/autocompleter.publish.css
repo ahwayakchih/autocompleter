@@ -39,45 +39,6 @@ div.autocompleter-popup .item.highlighted {
 	color: #222;
 }
 
-@keyframes loading {
-	0% {
-		padding: 0px;
-	}
-	50% {
-		padding: 0px 50px;
-	}
-	100% {
-		padding: 0px;
-	}
-}
-@-webkit-keyframes loading {
-	0% {
-		padding: 0px;
-	}
-	50% {
-		padding: 0px 50px;
-	}
-	100% {
-		padding: 0px;
-	}
-}
-div.autocompleter-popup p.loading {
-	margin: 0px;
-	padding: 0px;
-	content: '...';
-	color: #fff;
-	animation-name: loading;
-	animation-duration: 10s;
-	animation-iteration-count: infinite;
-	animation-direction: alternate;
-	animation-timing-function: ease-in-out;
-	-webkit-animation-name: loading;
-	-webkit-animation-duration: 10s;
-	-webkit-animation-iteration-count: infinite;
-	-webkit-animation-direction: alternate;
-	-webkit-animation-timing-function: ease-in-out;
-}
-
 div.autocompleter-popup p.debug {
 	display: none;
 }

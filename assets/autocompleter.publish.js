@@ -163,6 +163,12 @@
 				val = field.val();
 
 			autocompleter.startedAfter = val.substr(0, this.selectionStart);
+			// Start from closest whitespace, so user can autocomplete text that was already typed.
+			var m = autocompleter.startedAfter.match(/[^\s\n\r]+$/);
+			if (m && m.length > 0) {
+				autocompleter.startedAfter = autocompleter.startedAfter.substr(0, this.selectionStart - m[0].length);
+			}
+			autocompleter.backupText = val.substr(autocompleter.startedAfter.length, this.selectionEnd - autocompleter.startedAfter.length);
 			autocompleter.endedBefore = val.substr(this.selectionEnd);
 
 			if (field.hasClass('debug')) {
@@ -208,10 +214,13 @@
 			$(this).parents('label').find('span.autocompleter-help').html(Symphony.Language.get('Press CTRL with "i" for autocompleter')).removeClass('warning');
 		})
 		.live('cancel.autocompleter', function(event){
-			$(this).val(autocompleter.startedAfter + autocompleter.endedBefore);
-			this.setSelectionRange(autocompleter.startedAfter.length, autocompleter.startedAfter.length);
+			var field = $(this),
+				pos = autocompleter.startedAfter.length + autocompleter.backupText.length;
 
-			$(this).trigger('stop');
+			field.val(autocompleter.startedAfter + autocompleter.backupText + autocompleter.endedBefore);
+			this.setSelectionRange(pos, pos);
+
+			field.trigger('stop');
 		})
 		.live('confirm.autocompleter', function(){
 			var item = $('div#'+$(this).attr('id')+'-autocompleter .item.highlighted');
