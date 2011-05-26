@@ -97,6 +97,7 @@
 					'field': name,
 					'section': env['section_handle']
 				}
+				if (env['entry_id']) options['entry_id'] = env['entry_id'].toString();
 				popup.trigger('preautocomplete', [options]);
 
 				var data = '';
