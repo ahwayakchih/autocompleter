@@ -46,3 +46,10 @@ div.autocompleter-popup.debug p.debug {
 	display: block;
 	background: rgba(255, 128, 128, 0.3);
 }
+
+div.autocompleter-popup .error {
+	margin: 0px auto;
+	padding: 5px;
+	border: 0px none;
+	background: rgba(255, 128, 128, 0.3);
+}

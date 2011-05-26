@@ -6,6 +6,11 @@
 	 * @source: http://github.com/ahwayakchih/autocompleter
 	 */
 
+	// Language strings
+	Symphony.Language.add({
+		'Not found': false,
+	});
+
 	$(document).ready(function() {
 		var params = Symphony.Context.get('autocompleter'),
 			env = Symphony.Context.get('env'),
@@ -136,6 +141,9 @@
 							text = item.attr('data-preview');
 						if (text && text.indexOf(word) == 0)
 							popup.trigger('highlightitem', [item]);
+					},
+					error: function() {
+						popup.find('p.loading.autocompleter-url').replaceWith('<ul><li class="error">'+Symphony.Language.get('Not found')+'</li></ul>');
 					}
 				});
 			})
