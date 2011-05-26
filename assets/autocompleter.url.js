@@ -38,6 +38,17 @@
 							return $(this).attr('data-value');
 						}).get().join(',');
 
+						// If Queue is empty, try to make SubsectionManager load it.
+						// This is needed because SubsectionManager appends items to queue,
+						// no matter if they already are there or not. So if we add item before 
+						// Queue was not loaded, it will be duplicated after Queue is loaded
+						// (for example, after user starts browsing it).
+						// TODO: remove this if/when SubsectionManager starts appending only new items.
+						if ($('div.queue ul li', stage).length < 1) {
+							stage.trigger('browsestart');
+							stage.trigger('browsestop');
+						}
+
 						// Add item
 						var uploadeditem = $('<li><span></span></li>').appendTo(selection),
 							fakeframe = $('<div><div><form action="dummy://'+id+'">dummy</form></div></div>');
