@@ -51,6 +51,7 @@
 				else if (options.q[0] == '.' && options.q[1] == '/') {
 					options.qsection = options.section;
 					options.q = options.q.substring(1);
+					options.qlocal = 'yes';
 				}
 
 				if (options.q[0] == '/' && options.qsection != '') {
