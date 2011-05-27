@@ -160,16 +160,19 @@
 			autocompleter.ignorekey = false;
 			var field = $(this),
 				interval = params['interval'] || 300,
-				val = field.val();
+				val = field.val().replace(/\r\n/, "\n"),
+				selection = field.selectionRange();
 
-			autocompleter.startedAfter = val.substr(0, this.selectionStart);
 			// Start from closest whitespace, so user can autocomplete text that was already typed.
-			var m = autocompleter.startedAfter.match(/[^\s\n\r]+$/);
-			if (m && m.length > 0) {
-				autocompleter.startedAfter = autocompleter.startedAfter.substr(0, this.selectionStart - m[0].length);
+			autocompleter.startedAfter = val.substr(0, selection.start);
+			if (!(/\s/.test(val[selection.start - 1]))) {
+				var m = autocompleter.startedAfter.match(/\S+$/);
+				if (m && m.length > 0) {
+					autocompleter.startedAfter = autocompleter.startedAfter.substr(0, selection.start - m[0].length);
+				}
 			}
-			autocompleter.backupText = val.substr(autocompleter.startedAfter.length, this.selectionEnd - autocompleter.startedAfter.length);
-			autocompleter.endedBefore = val.substr(this.selectionEnd);
+			autocompleter.backupText = val.substr(autocompleter.startedAfter.length, selection.end - autocompleter.startedAfter.length);
+			autocompleter.endedBefore = val.substr(selection.end);
 
 			if (field.hasClass('debug')) {
 				$('div#'+field.attr('id')+'-autocompleter').addClass('debug');
@@ -218,7 +221,7 @@
 				pos = autocompleter.startedAfter.length + autocompleter.backupText.length;
 
 			field.val(autocompleter.startedAfter + autocompleter.backupText + autocompleter.endedBefore);
-			this.setSelectionRange(pos, pos);
+			field.selectionRange(pos, pos);
 
 			field.trigger('stop');
 		})
@@ -228,8 +231,10 @@
 			if (item.length > 0) {
 				var data = item.attr('data-drop') || item.attr('data-value');
 				if (data) {
-					$(this).val(autocompleter.startedAfter + data + autocompleter.endedBefore);
-					this.setSelectionRange(autocompleter.startedAfter.length + data.length, autocompleter.startedAfter.length + data.length);
+					var field = $(this);
+
+					field.val(autocompleter.startedAfter + data + autocompleter.endedBefore);
+					field.selectionRange(autocompleter.startedAfter.length + data.length, autocompleter.startedAfter.length + data.length);
 				}
 				autocompleter.ignorekey = !item.hasClass('continue');
 				item.trigger('confirm');
@@ -241,9 +246,10 @@
 		})
 		.live('confirmall.autocompleter', function(){
 			var data = '',
-				separator = prompt(Symphony.Language.get('Enter separator that will be added between entries'), ', ');
+				separator = prompt(Symphony.Language.get('Enter separator that will be added between entries'), ', '),
+				field = $(this);
 
-			$('div#'+$(this).attr('id')+'-autocompleter .item').each(function(i, item){
+			$('div#'+field.attr('id')+'-autocompleter .item').each(function(i, item){
 				var item = $(item),
 					s = item.attr('data-drop') || item.attr('data-value') || '';
 
@@ -253,22 +259,23 @@
 			});
 
 			if (data.length) {
-				$(this).val(autocompleter.startedAfter + data + autocompleter.endedBefore);
-				this.setSelectionRange(autocompleter.startedAfter.length + data.length, autocompleter.startedAfter.length + data.length);
+				field.val(autocompleter.startedAfter + data + autocompleter.endedBefore);
+				field.selectionRange(autocompleter.startedAfter.length + data.length, autocompleter.startedAfter.length + data.length);
 			}
 
 			if (autocompleter.ignorekey) {
-				$(this).trigger('stop');
+				field.trigger('stop');
 			}
 		})
 		.live('preview.autocompleter', function(event, preview){
 			if (!preview) return;
 
-			var val = autocompleter.startedAfter + preview + autocompleter.endedBefore,
-			    pos = this.selectionStart;
+			var field = $(this),
+				val = autocompleter.startedAfter + preview + autocompleter.endedBefore,
+			    selection = field.selectionRange();
 
-			$(this).val(val);
-			this.setSelectionRange(pos, pos + (preview.length - (pos - autocompleter.startedAfter.length)));
+			field.val(val);
+			field.selectionRange(selection.start, selection.start + (preview.length - (selection.start - autocompleter.startedAfter.length)));
 		})
 		.live('preprocess.autocompleter', function(event){
 			autocompleter.ignorekey = true;
@@ -294,13 +301,19 @@
 				case 8: // BACKSPACE
 				case 37: // left arrow
 					// We do not allow selecting outside of original area
-					this.setSelectionRange(Math.max(this.selectionStart - 1, autocompleter.startedAfter.length), this.selectionEnd);
+					var field = $(this),
+						selection = field.selectionRange();
+
+					field.selectionRange(Math.max(selection.start - 1, autocompleter.startedAfter.length), selection.end);
 					autocompleter.ignorekey = false;
 					return false;
 					break;
 				case 39: // right arrow
 					// We do not allow selecting outside of original area
-					this.setSelectionRange(this.selectionStart + 1, this.selectionEnd);
+					var field = $(this),
+						selection = field.selectionRange();
+
+					field.selectionRange(selection.start + 1, selection.end);
 					autocompleter.ignorekey = false;
 					return false;
 					break;
@@ -313,7 +326,8 @@
 			if (autocompleter.ignorekey) return;
 
 			var field = $(this),
-				word = field.val().substr(autocompleter.startedAfter.length, this.selectionStart - autocompleter.startedAfter.length),
+				selection = field.selectionRange();
+				word = field.val().substr(autocompleter.startedAfter.length, selection.start - autocompleter.startedAfter.length),
 				popup = $('div#'+$(this).attr('id')+'-autocompleter');
 
 			popup
@@ -327,8 +341,8 @@
 					end: text.length - autocompleter.endedBefore.length - autocompleter.startedAfter.length,
 					pre: autocompleter.startedAfter,
 					post: autocompleter.endedBefore,
-					editedWordPre: text.substr(autocompleter.startedAfter.length, this.selectionStart - autocompleter.startedAfter.length),
-					editedWordPost: text.substr(this.selectionStart, this.selectionEnd - this.selectionStart),
+					editedWordPre: text.substr(autocompleter.startedAfter.length, selection.start - autocompleter.startedAfter.length),
+					editedWordPost: text.substr(selection.start, selection.end - selection.start),
 					editedLinePre: ''
 				};
 			data.pre += data.editedWordPre;
