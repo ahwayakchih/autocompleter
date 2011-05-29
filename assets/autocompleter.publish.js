@@ -160,12 +160,12 @@
 			autocompleter.ignorekey = false;
 			var field = $(this),
 				interval = params['interval'] || 300,
-				val = field.val().replace(/\r\n/, "\n"),
+				val = field.val();
 				selection = field.selectionRange();
 
 			// Start from closest whitespace, so user can autocomplete text that was already typed.
 			autocompleter.startedAfter = val.substr(0, selection.start);
-			if (!(/\s/.test(val[selection.start - 1]))) {
+			if (!(/\s$/.test(autocompleter.startedAfter))) {
 				var m = autocompleter.startedAfter.match(/\S+$/);
 				if (m && m.length > 0) {
 					autocompleter.startedAfter = autocompleter.startedAfter.substr(0, selection.start - m[0].length);
@@ -218,10 +218,13 @@
 		})
 		.live('cancel.autocompleter', function(event){
 			var field = $(this),
+				scrollTop = this.scrollTop,
 				pos = autocompleter.startedAfter.length + autocompleter.backupText.length;
 
 			field.val(autocompleter.startedAfter + autocompleter.backupText + autocompleter.endedBefore);
 			field.selectionRange(pos, pos);
+			// Required for Firefox.
+			this.scrollTop = scrollTop;
 
 			field.trigger('stop');
 		})
@@ -231,10 +234,13 @@
 			if (item.length > 0) {
 				var data = item.attr('data-drop') || item.attr('data-value');
 				if (data) {
-					var field = $(this);
+					var field = $(this),
+						scrollTop = this.scrollTop;
 
 					field.val(autocompleter.startedAfter + data + autocompleter.endedBefore);
 					field.selectionRange(autocompleter.startedAfter.length + data.length, autocompleter.startedAfter.length + data.length);
+					// Required for Firefox.
+					this.scrollTop = scrollTop;
 				}
 				autocompleter.ignorekey = !item.hasClass('continue');
 				item.trigger('confirm');
@@ -247,7 +253,8 @@
 		.live('confirmall.autocompleter', function(){
 			var data = '',
 				separator = prompt(Symphony.Language.get('Enter separator that will be added between entries'), ', '),
-				field = $(this);
+				field = $(this),
+				scrollTop = this.scrollTop;
 
 			$('div#'+field.attr('id')+'-autocompleter .item').each(function(i, item){
 				var item = $(item),
@@ -261,6 +268,8 @@
 			if (data.length) {
 				field.val(autocompleter.startedAfter + data + autocompleter.endedBefore);
 				field.selectionRange(autocompleter.startedAfter.length + data.length, autocompleter.startedAfter.length + data.length);
+				// Required for Firefox.
+				this.scrollTop = scrollTop;
 			}
 
 			if (autocompleter.ignorekey) {
@@ -271,11 +280,14 @@
 			if (!preview) return;
 
 			var field = $(this),
+				scrollTop = this.scrollTop;
 				val = autocompleter.startedAfter + preview + autocompleter.endedBefore,
 			    selection = field.selectionRange();
 
 			field.val(val);
 			field.selectionRange(selection.start, selection.start + (preview.length - (selection.start - autocompleter.startedAfter.length)));
+			// This is required for Firefox, otherwise it will scroll TEXTAREA to the top :(.
+			this.scrollTop = scrollTop;
 		})
 		.live('preprocess.autocompleter', function(event){
 			autocompleter.ignorekey = true;
