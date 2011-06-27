@@ -5,7 +5,7 @@ span.autocompleter-help.warning {
 div.autocompleter-popup {
 	overflow: auto;
 	max-height: 400px;
-	margin: 0px none;
+	margin: 0px;
 	margin-top: 0.4em;
 	padding: 0px;
 	border: 0px none;

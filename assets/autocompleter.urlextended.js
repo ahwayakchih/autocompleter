@@ -7,7 +7,8 @@
 	 * That way, author can enter "[/photos/file/jpg" to get file uploaded to
 	 * "file" upload qfield in "photos" qsection.
 	 * If entered path starts with "./" then qsection is the same as the 
-	 * the one that edited entry belongs to.
+	 * the one that edited entry belongs to and additional variable "qlocal" is set
+	 * to "yes".
 	 *
 	 * @author: Marcin Konicki, ahwayakchih@neoni.net
 	 * @source: http://github.com/ahwayakchih/autocompleter
