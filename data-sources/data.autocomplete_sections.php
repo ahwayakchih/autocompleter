@@ -207,6 +207,7 @@
 							'required' => $field->get('required'),
 							'location' => $field->get('location'),
 							'show_column' => $field->get('show_column'),
+							'hide' => ($field->get('hide') == 'yes' ? 'yes' : 'no'), // "hide" seems to be used by 3rd party extensions
 							'proximity' => $fpos
 						)));
 					}
