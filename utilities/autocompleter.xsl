@@ -80,7 +80,7 @@
 	Default template for item prefix.
 	It assumes that SubsectionManager field handle will be the same as its target section handle.
 -->
-<xsl:template match="entry" mode="autocompleter-item-prefix" priority='0'>
+<xsl:template match="entry" mode="autocompleter-item-prefix" priority="0">
 	<xsl:choose>
 		<xsl:when test="/data/params/url-qlocal = 'yes'">
 			<xsl:value-of select="concat($autocompleterPrefix, ../section/@handle, '/')"/>
@@ -98,7 +98,7 @@
 	Default template for item postfix.
 	It assumes that SubsectionManager field handle will be the same as its target section handle.
 -->
-<xsl:template match="entry" mode="autocompleter-item-postfix" priority='0'>
+<xsl:template match="entry" mode="autocompleter-item-postfix" priority="0">
 	<xsl:choose>
 		<xsl:when test="$autocompleterMode = 'embed'">
 			<xsl:text>]</xsl:text>
@@ -113,7 +113,7 @@
 <!--
 	Default template for item class.
 -->
-<xsl:template match="entry" mode="autocompleter-item-class" priority='0'>
+<xsl:template match="entry" mode="autocompleter-item-class" priority="0">
 	
 </xsl:template>
 
@@ -121,7 +121,7 @@
 <!--
 	Default template for item value.
 -->
-<xsl:template match="entry" mode="autocompleter-item-value" priority='0'>
+<xsl:template match="entry" mode="autocompleter-item-value" priority="0">
 	<xsl:value-of select="@id" />
 </xsl:template>
 
@@ -129,9 +129,10 @@
 <!--
 	Default template for item preview.
 -->
-<xsl:template match="entry" mode="autocompleter-item-preview" priority='0'>
+<xsl:template match="entry" mode="autocompleter-item-preview" priority="0">
 	<xsl:apply-templates select="." mode="autocompleter-item-prefix"/>
-	<xsl:value-of select="concat(title|name|path|type, $autocompleterPostfix)"/>
+	<xsl:value-of select="title|name|path|type"/>
+	<xsl:apply-templates select="." mode="autocompleter-item-postfix"/>
 </xsl:template>
 
 
@@ -141,7 +142,7 @@
 	In link mode output looks like this: "Great wall photo" (photos://123).
 	In raw mode output looks like this: photos://123.
 -->
-<xsl:template match="entry" mode="autocompleter-item-drop" priority='0'>
+<xsl:template match="entry" mode="autocompleter-item-drop" priority="0">
 	<xsl:choose>
 		<xsl:when test="$autocompleterMode = 'embed'">
 			<xsl:value-of select="concat('[', ../section/@handle, '://', @id, ']')"/>
@@ -160,7 +161,7 @@
 	Default template for item select-in field names.
 	It assumes that SubsectionManager field handle is the same as its target section handle.
 -->
-<xsl:template match="entry" mode="autocompleter-item-select-fields" priority='0'>
+<xsl:template match="entry" mode="autocompleter-item-select-fields" priority="0">
 	<xsl:value-of select="../section/@handle"/>
 </xsl:template>
 
@@ -169,7 +170,7 @@
 	Default template for item meta content.
 	It outputs entry/date, entry/type and parent section.
 -->
-<xsl:template match="entry" mode="autocompleter-item-meta" priority='0'>
+<xsl:template match="entry" mode="autocompleter-item-meta" priority="0">
 	<xsl:if test="date">
 		<span class="date"><xsl:value-of select="date"/></span>
 	</xsl:if>
@@ -184,7 +185,7 @@
 	Default template for item text value.
 	It outputs entry/title or entry/name or entry/path.
 -->
-<xsl:template match="entry" mode="autocompleter-item-text" priority='0'>
+<xsl:template match="entry" mode="autocompleter-item-text" priority="0">
 	<xsl:value-of select="title|name|path"/>
 </xsl:template>
 
@@ -192,7 +193,7 @@
 <!--
 	Build LI element for each entry.
 -->
-<xsl:template match="entry" mode="autocompleter-item">
+<xsl:template match="entry" mode="autocompleter-item" priority="0">
 	<li>
 		<xsl:attribute name="class">
 			<xsl:value-of select="concat('item ', ../section/@handle)"/>
