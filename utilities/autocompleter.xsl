@@ -3,7 +3,7 @@
 	xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
 
 <!--
-	Example usage:
+	Example usage that overrides item generation to add image to entries from "photos" section:
 
 		<xsl:include href="../utilities/autocompleter.xsl"/>
 
@@ -39,18 +39,73 @@
 
 <!--
 	Set value of autocompleterPrefix parameter.
+-->
+<xsl:param name="autocompleterPrefix">
+	<xsl:choose>
+		<xsl:when test="$autocompleterMode = 'embed'">
+			<xsl:text>[</xsl:text>
+		</xsl:when>
+		<xsl:when test="$autocompleterMode = 'link'">
+			<xsl:text>(</xsl:text>
+		</xsl:when>
+	</xsl:choose>
+
+	<xsl:choose>
+		<xsl:when test="/data/params/url-qlocal = 'yes'">
+			<xsl:text>./</xsl:text>
+		</xsl:when>
+		<xsl:otherwise>
+			<xsl:text>/</xsl:text>
+		</xsl:otherwise>
+	</xsl:choose>
+</xsl:param>
+
+
+<!--
+	Set value of autocompleterPostfix parameter.
+-->
+<xsl:param name="autocompleterPostfix">
+	<xsl:choose>
+		<xsl:when test="$autocompleterMode = 'embed'">
+			<xsl:text>]</xsl:text>
+		</xsl:when>
+		<xsl:when test="$autocompleterMode = 'link'">
+			<xsl:text>)</xsl:text>
+		</xsl:when>
+	</xsl:choose>
+</xsl:param>
+
+
+<!--
+	Default template for item prefix.
 	It assumes that SubsectionManager field handle will be the same as its target section handle.
 -->
 <xsl:template match="entry" mode="autocompleter-item-prefix" priority='0'>
 	<xsl:choose>
 		<xsl:when test="/data/params/url-qlocal = 'yes'">
-			<xsl:value-of select="concat('./', ../section/@handle, '/')"/>
+			<xsl:value-of select="concat($autocompleterPrefix, ../section/@handle, '/')"/>
 		</xsl:when>
 		<xsl:otherwise>
-			<xsl:value-of select="concat('/', ../section/@handle, '/')"/>
+			<xsl:value-of select="concat($autocompleterPrefix, ../section/@handle, '/')"/>
 			<xsl:value-of select="/data/params/url-qfield"/>
 			<xsl:text>/</xsl:text>
 		</xsl:otherwise>
+	</xsl:choose>
+</xsl:template>
+
+
+<!--
+	Default template for item postfix.
+	It assumes that SubsectionManager field handle will be the same as its target section handle.
+-->
+<xsl:template match="entry" mode="autocompleter-item-postfix" priority='0'>
+	<xsl:choose>
+		<xsl:when test="$autocompleterMode = 'embed'">
+			<xsl:text>]</xsl:text>
+		</xsl:when>
+		<xsl:when test="$autocompleterMode = 'link'">
+			<xsl:text>)</xsl:text>
+		</xsl:when>
 	</xsl:choose>
 </xsl:template>
 
@@ -75,20 +130,8 @@
 	Default template for item preview.
 -->
 <xsl:template match="entry" mode="autocompleter-item-preview" priority='0'>
-	<xsl:param name="prefix">
-		<xsl:apply-templates select="." mode="autocompleter-item-prefix"/>
-	</xsl:param>
-	<xsl:choose>
-		<xsl:when test="$autocompleterMode = 'embed'">
-			<xsl:value-of select="concat('[', $prefix, title|name|path|type, ']')"/>
-		</xsl:when>
-		<xsl:when test="$autocompleterMode = 'link'">
-			<xsl:value-of select="concat('(', $prefix, title|name|path|type, ')')"/>
-		</xsl:when>
-		<xsl:otherwise>
-			<xsl:value-of select="concat($prefix, title|name|path|type)"/>
-		</xsl:otherwise>
-	</xsl:choose>
+	<xsl:apply-templates select="." mode="autocompleter-item-prefix"/>
+	<xsl:value-of select="concat(title|name|path|type, $autocompleterPostfix)"/>
 </xsl:template>
 
 
@@ -176,10 +219,65 @@
 
 
 <!--
+	Build LI element for each section.
+-->
+<xsl:template match="section" mode="autocompleter-item" priority="0">
+	<li>
+		<xsl:attribute name="class">
+			<xsl:value-of select="concat('item continue section ', @handle)"/>
+		</xsl:attribute>
+		<xsl:attribute name="data-value">
+			<xsl:value-of select="concat($autocompleterPrefix, @handle, '/')"/>
+		</xsl:attribute>
+		<xsl:attribute name="data-preview">
+			<xsl:value-of select="concat($autocompleterPrefix, @handle, '/')"/>
+		</xsl:attribute>
+		<div class="meta">
+			<span class="type">Section</span>
+		</div>
+		<xsl:value-of select="name"/>
+	</li>
+</xsl:template>
+
+
+<!--
+	Build LI element for each section/field.
+-->
+<xsl:template match="section/field" mode="autocompleter-item" priority="0">
+	<li>
+		<xsl:attribute name="class">
+			<xsl:value-of select="concat('item continue field ', @handle)"/>
+		</xsl:attribute>
+		<xsl:attribute name="data-value">
+			<xsl:value-of select="concat($autocompleterPrefix, ../@handle, '/', @handle, '/')"/>
+		</xsl:attribute>
+		<xsl:attribute name="data-preview">
+			<xsl:value-of select="concat($autocompleterPrefix, ../@handle, '/', @handle, '/')"/>
+		</xsl:attribute>
+		<div class="meta">
+			<span class="type">Field</span>
+			<span class="section"><xsl:value-of select="../name"/></span>
+		</div>
+		<xsl:value-of select="."/>
+	</li>
+</xsl:template>
+
+
+<!--
 	Select data from sources that have names starting with 'autocomplete'.
 	Build UL element for each data source that returned entries.
 -->
 <xsl:template match="/" mode="autocompleter">
+	<xsl:if test="/data/params/url-q = '' and /data/params/url-qfield = '' and count(/data/autocomplete-sections/section[@handle = /data/params/url-qsection]) &lt; 1">
+		<xsl:apply-templates select="data/autocomplete-sections/section" mode="autocompleter-item">
+			<xsl:sort select="@proximity" data-type="number" order="ascending"/>
+		</xsl:apply-templates>
+	</xsl:if>
+	<xsl:if test="/data/params/url-q = '' and /data/autocomplete-sections/section[@handle = /data/params/url-qsection] and count(/data/autocomplete-sections/section/field[@handle = /data/params/url-qfield]) &lt; 1">
+		<xsl:apply-templates select="data/autocomplete-sections/section/field[@show_column='yes' or @hide='no']" mode="autocompleter-item">
+			<xsl:sort select="@proximity" data-type="number" order="ascending"/>
+		</xsl:apply-templates>
+	</xsl:if>
 	<xsl:for-each select="data/*[starts-with(local-name(),'autocomplete') and count(entry) &gt; 0]">
 		<xsl:apply-templates select="entry" mode="autocompleter-item"/>
 	</xsl:for-each>
