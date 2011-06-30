@@ -245,15 +245,26 @@
 	Build LI element for each section/field.
 -->
 <xsl:template match="section/field" mode="autocompleter-item" priority="0">
+	<xsl:variable name="section">
+		<xsl:choose>
+			<xsl:when test="/data/params/url-qlocal = 'yes'">
+				<xsl:text></xsl:text>
+			</xsl:when>
+			<xsl:otherwise>
+				<xsl:value-of select="concat(../@handle, '/')"/>
+			</xsl:otherwise>
+		</xsl:choose>
+	</xsl:variable>
+
 	<li>
 		<xsl:attribute name="class">
 			<xsl:value-of select="concat('item continue field ', @handle)"/>
 		</xsl:attribute>
 		<xsl:attribute name="data-value">
-			<xsl:value-of select="concat($autocompleterPrefix, ../@handle, '/', @handle, '/')"/>
+			<xsl:value-of select="concat($autocompleterPrefix, $section, @handle, '/')"/>
 		</xsl:attribute>
 		<xsl:attribute name="data-preview">
-			<xsl:value-of select="concat($autocompleterPrefix, ../@handle, '/', @handle, '/')"/>
+			<xsl:value-of select="concat($autocompleterPrefix, $section, @handle, '/')"/>
 		</xsl:attribute>
 		<div class="meta">
 			<span class="type">Field</span>
@@ -269,12 +280,12 @@
 	Build UL element for each data source that returned entries.
 -->
 <xsl:template match="/" mode="autocompleter">
-	<xsl:if test="/data/params/url-q = '' and /data/params/url-qfield = '' and count(/data/autocomplete-sections/section[@handle = /data/params/url-qsection]) &lt; 1">
+	<xsl:if test="/data/params/url-qhas = 'section'">
 		<xsl:apply-templates select="data/autocomplete-sections/section" mode="autocompleter-item">
 			<xsl:sort select="@proximity" data-type="number" order="ascending"/>
 		</xsl:apply-templates>
 	</xsl:if>
-	<xsl:if test="/data/params/url-q = '' and /data/autocomplete-sections/section[@handle = /data/params/url-qsection] and count(/data/autocomplete-sections/section/field[@handle = /data/params/url-qfield]) &lt; 1">
+	<xsl:if test="/data/params/url-qhas = 'field'">
 		<xsl:apply-templates select="data/autocomplete-sections/section/field[@show_column='yes' or @hide='no']" mode="autocompleter-item">
 			<xsl:sort select="@proximity" data-type="number" order="ascending"/>
 		</xsl:apply-templates>

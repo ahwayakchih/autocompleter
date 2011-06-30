@@ -40,7 +40,7 @@
 			    highlighted = $('.item.highlighted', popup);
 
 			if (!highlighted || highlighted.length < 1) {
-				highlighted = $('.item:first', popup).addClass('highlighted');
+				highlighted = $('.item:first', popup);
 			}
 			else {
 				var items = popup.find('.item'),
@@ -53,10 +53,10 @@
 				if (index < 0) index = items.length - 1;
 				else if (index >= items.length) index = 0;
 
-				highlighted = items.eq(index).addClass('highlighted');
+				highlighted = items.eq(index);
 			}
 
-			$(highlighted).trigger('highlighted', [true]);
+			$(highlighted).addClass('highlighted').trigger('highlighted', [true]);
 		})
 		.live('highlightitem.autocompleter', function(event, item){
 			var popup = $(this),
