@@ -21,6 +21,7 @@
 
 		public $dsParamINCLUDEDELEMENTS = array(
 			'name',
+			'navigation_group',
 			'fields'
 		);
 
@@ -168,22 +169,30 @@
 
 			if (!is_array($this->dsParamINCLUDEDELEMENTS)) $this->dsParamINCLUDEDELEMENTS = array();
 			$includeName = in_array('name', $this->dsParamINCLUDEDELEMENTS);
+			$includeNavigationGroup = in_array('navigation_group', $this->dsParamINCLUDEDELEMENTS);
 			$includeFields = in_array('fields', $this->dsParamINCLUDEDELEMENTS);
 
 			$result = new XMLElement($this->dsParamROOTELEMENT);
 			$filters = array_filter(array_map('strtolower', array_map('trim', $this->dsParamFILTERS)));
 			foreach ($sections as $section) {
-				$name = $section->get('name');
+				$handle = $section->get('handle');
 				$spos = 0;
 				if (isset($filters['name'])) {
-					$temp = strtolower($name);
+					$temp = strtolower($handle);
 					$spos = strpos($temp, $filters['name']);
 					if ($spos === FALSE) continue;
 					else if ($spos == 0 && $temp != $filters['name']) $spos++;
 				}
 
-				$s = new XMLElement('section', NULL, array('id' => $section->get('id'), 'handle' => $section->get('handle'), 'proximity' => $spos));
-				if ($includeName) $s->appendChild(new XMLElement('name', $name));
+				$s = new XMLElement('section', NULL, array(
+					'id' => $section->get('id'),
+					'handle' => $handle,
+					'proximity' => $spos,
+					'hidden' => $section->get('hidden'),
+					'sortorder' => $section->get('sortorder')
+				));
+				if ($includeName) $s->appendChild(new XMLElement('name', $section->get('name')));
+				if ($includeNavigationGroup) $s->appendChild(new XMLElement('navigation-group', $section->get('navigation_group')));
 
 				$found = array();
 				if (isset($filters['fields']) || $includeFields) {
@@ -191,19 +200,19 @@
 					if (!is_array($fields)) continue;
 
 					foreach ($fields as $field) {
-						$name = $field->get('label');
+						$handle = $field->get('element_name');
 						$fpos = 0;
 						if (isset($filters['fields'])) {
-							$temp = strtolower($name);
+							$temp = strtolower($handle);
 							$fpos = strpos($temp, $filters['fields']);
 							if ($fpos === FALSE) continue;
 							else if ($fpos == 0 && $temp != $filters['fields']) $fpos++;
 						}
 						$found[] = $id = $field->get('id');
-						if ($includeFields) $s->appendChild(new XMLElement('field', $name, array(
+						if ($includeFields) $s->appendChild(new XMLElement('field', $field->get('label'), array(
 							'id' => $id,
 							'type' => $field->get('type'),
-							'handle' => $field->get('element_name'),
+							'handle' => $handle,
 							'required' => $field->get('required'),
 							'location' => $field->get('location'),
 							'show_column' => $field->get('show_column'),

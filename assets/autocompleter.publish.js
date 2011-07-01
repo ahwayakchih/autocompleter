@@ -354,7 +354,7 @@
 					pre: autocompleter.startedAfter,
 					post: autocompleter.endedBefore,
 					editedWordPre: text.substr(autocompleter.startedAfter.length, selection.start - autocompleter.startedAfter.length),
-					editedWordPost: text.substr(selection.start, selection.end - selection.start),
+					editedWordPost: text.substr(selection.start, Math.min(text.length - autocompleter.endedBefore.length - autocompleter.startedAfter.length, selection.end) - selection.start),
 					editedLinePre: ''
 				};
 			data.pre += data.editedWordPre;
