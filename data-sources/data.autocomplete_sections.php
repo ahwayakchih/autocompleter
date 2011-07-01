@@ -31,6 +31,13 @@
 			'fields'
 		);
 
+		// Now our own, autocompleter-specific settings
+		// When set to `true`, this data-source will output sections and fields
+		// only if they are included in other data-sources on the same page,
+		// and only if they are filtered by those fields.
+		public $dsParamFILTERBYOTHERDATASOURCES = true;
+
+
 		public function __construct(&$parent, $env=NULL, $process_params=true){
 			parent::__construct($parent, $env, $process_params);
 			$this->_dependencies = array();
@@ -155,9 +162,17 @@
 		}
 
 		private function _grab(&$param_pool=NULL){
+			// Include classes we require
 			include_once(TOOLKIT . '/class.sectionmanager.php');
 			include_once(TOOLKIT . '/class.xmlelement.php');
-			$sm = new SectionManager(Symphony::Engine());
+
+			$engine = Symphony::Engine();
+			// Load settings if we're on frontend
+			// (we use only one settings for now, and it depends on frontend :).
+			$whitelist = $this->getSources($engine);
+
+			// 
+			$sm = new SectionManager($engine);
 			$sections = $sm->fetch(NULL, 'ASC', 'name');
 			if (empty($sections)) return $this->emptyXMLSet();
 
@@ -175,18 +190,24 @@
 			$result = new XMLElement($this->dsParamROOTELEMENT);
 			$filters = array_filter(array_map('strtolower', array_map('trim', $this->dsParamFILTERS)));
 			foreach ($sections as $section) {
-				$handle = $section->get('handle');
+				$sectionID = $section->get('id');
+
+				if (!empty($whitelist) && !is_array($whitelist[$sectionID])) {
+					continue;
+				}
+
 				$spos = 0;
+				$sectionHandle = $section->get('handle');
 				if (isset($filters['name'])) {
-					$temp = strtolower($handle);
+					$temp = strtolower($sectionHandle);
 					$spos = strpos($temp, $filters['name']);
 					if ($spos === FALSE) continue;
 					else if ($spos == 0 && $temp != $filters['name']) $spos++;
 				}
 
 				$s = new XMLElement('section', NULL, array(
-					'id' => $section->get('id'),
-					'handle' => $handle,
+					'id' => $sectionID,
+					'handle' => $sectionHandle,
 					'proximity' => $spos,
 					'hidden' => $section->get('hidden'),
 					'sortorder' => $section->get('sortorder')
@@ -200,19 +221,26 @@
 					if (!is_array($fields)) continue;
 
 					foreach ($fields as $field) {
-						$handle = $field->get('element_name');
+						$fieldID = $field->get('id');
+
+						if (!empty($whitelist) && !isset($whitelist[$sectionID][$fieldID])) {
+							continue;
+						}
+
 						$fpos = 0;
+						$fieldHandle = $field->get('element_name');
 						if (isset($filters['fields'])) {
-							$temp = strtolower($handle);
+							$temp = strtolower($fieldHandle);
 							$fpos = strpos($temp, $filters['fields']);
 							if ($fpos === FALSE) continue;
 							else if ($fpos == 0 && $temp != $filters['fields']) $fpos++;
 						}
-						$found[] = $id = $field->get('id');
+
+						$found[] = $fieldID;
 						if ($includeFields) $s->appendChild(new XMLElement('field', $field->get('label'), array(
-							'id' => $id,
+							'id' => $fieldID,
 							'type' => $field->get('type'),
-							'handle' => $handle,
+							'handle' => $fieldHandle,
 							'required' => $field->get('required'),
 							'location' => $field->get('location'),
 							'show_column' => $field->get('show_column'),
@@ -254,6 +282,41 @@
 
 			$this->processParameters($env);
 			if (is_array($env['param'])) $param_pool = array_merge($param_pool, $env['param']);
+		}
+
+
+		private function getSources(&$engine) {
+			if (empty($this->dsParamFILTERBYOTHERDATASOURCES) || !($engine instanceof Frontend)) return array();
+
+			// TODO: cache results, so we will not have to run it every time this data-source is used.
+			$page = Frontend::Page();
+			$data = $page->pageData();
+
+			$datasources = preg_split('/,\s*/i', $data['data_sources'], -1, PREG_SPLIT_NO_EMPTY);
+			$datasources = array_filter(array_map('trim', $datasources));
+
+			if (!is_array($datasources) || empty($datasources)) return array();
+
+			$result = array();
+			$datasourceManager = new DatasourceManager($engine);
+			foreach ($datasources as $handle) {
+				$existing =& $datasourceManager->create($handle, NULL, false);
+				//$parent = get_parent_class($existing);
+
+				if (!method_exists($existing, 'getSource')) continue;
+				if (!is_array($existing->dsParamFILTERS) || empty($existing->dsParamFILTERS)) continue;
+
+				$sectionID = $existing->getSource();
+				if (!is_numeric($sectionID) || !($sectionID = intval($sectionID))) continue;
+				$result[$sectionID] = array();
+
+				foreach ($existing->dsParamFILTERS as $fieldID => $filter) {
+					if (!is_numeric($fieldID) || !($fieldID = intval($fieldID))) continue;
+					$result[$sectionID][$fieldID] = true;
+				}
+			}
+
+			return $result;
 		}
 
 	}
