@@ -300,6 +300,10 @@
 			$result = array();
 			$datasourceManager = new DatasourceManager($engine);
 			foreach ($datasources as $handle) {
+				// Do not check ourselves ;).
+				$classname = $datasourceManager->__getClassName($handle);
+				if ($classname == __CLASS__) continue;
+
 				$existing =& $datasourceManager->create($handle, NULL, false);
 				//$parent = get_parent_class($existing);
 
