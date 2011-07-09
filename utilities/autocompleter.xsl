@@ -386,6 +386,14 @@
 	</xsl:if>
 </xsl:template>
 
+<!--
+	Build entry item.
+	Just pass through. This template is mainly for easy overrides.
+-->
+<xsl:template match="entry" mode="autocompleter-entry" priority="0">
+	<xsl:apply-templates select="." mode="autocompleter-item"/>
+</xsl:template>
+
 
 <!--
 	Build section items.
@@ -414,7 +422,7 @@
 -->
 <xsl:template match="/" mode="autocompleter-entries" priority="0">
 	<xsl:for-each select="data/*[starts-with(local-name(),'autocomplete') and count(entry) &gt; 0 and count(section) &gt; 0]">
-		<xsl:apply-templates select="entry" mode="autocompleter-item"/>
+		<xsl:apply-templates select="entry" mode="autocompleter-entry"/>
 	</xsl:for-each>
 </xsl:template>
 
