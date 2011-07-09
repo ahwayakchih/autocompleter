@@ -312,7 +312,7 @@
 
 				$sectionID = $existing->getSource();
 				if (!is_numeric($sectionID) || !($sectionID = intval($sectionID))) continue;
-				$result[$sectionID] = array();
+				if (!is_array($result[$sectionID])) $result[$sectionID] = array();
 
 				foreach ($existing->dsParamFILTERS as $fieldID => $filter) {
 					if (!is_numeric($fieldID) || !($fieldID = intval($fieldID))) continue;
