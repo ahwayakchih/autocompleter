@@ -48,7 +48,7 @@
 				}
 
 				if (options.q[0] == '/') {
-					var temp = options.q.match(/^\/([^\/\s]*)(\/?)/);
+					var temp = options.q.match(/^\/([^\/]*)(\/?)/);
 					if (temp && temp.length > 0) {
 						options.qsection = temp[1];
 						if (temp[2] == '/') {
@@ -68,7 +68,7 @@
 				}
 
 				if (options.q[0] == '/' && options.qsection != '') {
-					var temp = options.q.match(/^\/([^\/\s]*)(\/?)/);
+					var temp = options.q.match(/^\/([^\/]*)(\/?)/);
 					if (temp && temp.length > 0) {
 						options.qfield = temp[1];
 						if (temp[2] == '/')	{
