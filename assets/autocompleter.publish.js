@@ -2,6 +2,9 @@
 	/**
 	 * This plugin adds an autocompleter functionality on publish pages.
 	 *
+	 * Autocompleter will handle every INPUT and TEXAREA element that has class "autocompleter".
+	 * Additional scripts implement "sources" that generate search results.
+	 *
 	 * @author: Marcin Konicki, ahwayakchih@neoni.net
 	 * @source: http://github.com/ahwayakchih/autocompleter
 	 */
@@ -21,9 +24,10 @@
 				fieldID = field.parents('div[id]').attr('id').replace('field-','');
 
 			if (params && params['fields'] && params['fields'][fieldID]) {
-				field
-					.addClass('autocompleter')
-					.attr('data-autocompleterurl', params['fields'][fieldID]['url'] || '');
+				field.addClass('autocompleter');
+				if (params['fields'][fieldID]['url']) {
+					field.attr('data-autocompleterurl', params['fields'][fieldID]['url']);
+				}
 			}
 		});
 	});

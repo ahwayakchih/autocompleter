@@ -1,6 +1,6 @@
 (function($) {
 	/**
-	 * This plugin autocompletes by using data from predefined URL.
+	 * This plugin returns results for autocompleter based on data loaded from predefined URL.
 	 *
 	 * @author: Marcin Konicki, ahwayakchih@neoni.net
 	 * @source: http://github.com/ahwayakchih/autocompleter
